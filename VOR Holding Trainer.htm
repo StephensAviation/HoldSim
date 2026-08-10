@@ -1,0 +1,2098 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="VOR Hold">
+<meta name="theme-color" content="#05070a">
+<title>VOR Holding Trainer</title>
+<style>
+  :root{
+    --bg:#05070a; --panel:#10151b; --panel2:#161d25; --rule:#232c36;
+    --txt:#dfe6ee; --dim:#78868f; --dim2:#4d5b66;
+    --grn:#46c98b; --amb:#f0a848; --cyn:#59b7e8; --red:#e2564f; --mag:#c86ad0;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    --cond:"Roboto Condensed","Arial Narrow",ui-sans-serif,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;
+    -webkit-user-select:none;user-select:none;
+    -webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+  input,textarea{-webkit-user-select:text;user-select:text}
+  html{height:100%;margin:0;overflow:hidden;overscroll-behavior:none}
+  /* pinned to the viewport so the document itself has nowhere to scroll or bounce */
+  body{
+    position:fixed;top:0;left:0;right:0;bottom:0;margin:0;
+    background:var(--bg);color:var(--txt);font-family:var(--cond);
+    overflow:hidden;overscroll-behavior:none;
+  }
+  /* the only regions allowed to move under a finger */
+  .scroll,#sideCol,#help,#verdict{touch-action:pan-y;overscroll-behavior:contain}
+  button,input,select{font-family:inherit;color:inherit}
+
+  /* ---------- shell ---------- */
+  #app{height:100%;display:flex;flex-direction:column}
+  header{
+    display:flex;align-items:center;gap:14px;flex:none;
+    padding:calc(8px + env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) 8px max(14px,env(safe-area-inset-left));
+    border-bottom:1px solid var(--rule);background:var(--panel);
+  }
+  .brand{font-size:14px;letter-spacing:.22em;text-transform:uppercase;color:var(--dim)}
+  .brand b{color:var(--txt);font-weight:600}
+  .spacer{flex:1}
+  .kbdhint{font-size:12px;color:var(--dim2);letter-spacing:.08em}
+  .state{font-family:var(--mono);font-size:12px;letter-spacing:.18em;min-width:96px;text-align:right}
+
+  .hdrbtn{font-size:11px;letter-spacing:.14em;text-transform:uppercase;padding:5px 10px;
+    background:#161d25;border:1px solid var(--rule);border-radius:2px;color:#8e9ba6;cursor:pointer}
+  .hdrbtn:hover{color:#e2e9f0;border-color:#3d4a57}
+
+  main{flex:1;display:grid;grid-template-columns:1fr 372px;min-height:0}
+  body.norail main{grid-template-columns:1fr}
+
+  /* ---------- stage: the HSI is the aircraft ---------- */
+  /* every level clips, so a child that cannot fit is trimmed rather than
+     painted over its neighbour. no element can ever share space with another. */
+  #stage{display:flex;flex-direction:column;gap:9px;padding:12px 16px 14px;
+    min-height:0;min-width:0;overflow:hidden}
+  #stageBody{flex:1 1 0;min-height:0;min-width:0;overflow:hidden;
+    display:flex;flex-direction:column;gap:9px}
+  #instCol{flex:1 1 0;min-height:0;min-width:0;overflow:hidden;
+    display:flex;flex-direction:column;gap:9px}
+  #sideCol{flex:0 1 auto;min-height:0;min-width:0;overflow-y:auto;overflow-x:hidden;
+    display:flex;flex-direction:column;gap:9px}
+  #hsiBox{flex:1 1 0;min-height:80px;min-width:0;overflow:hidden;
+    display:flex;align-items:center;justify-content:center;gap:16px}
+  .statusRow{flex:none}
+  #mapSlot{display:none;min-width:0}
+  #hsi,#dg{display:block}
+  #stage .card,#stage .grid4{margin-top:0}
+  .statusRow{display:flex;align-items:center;gap:12px}
+  #stageStatus{flex:1;display:flex;gap:18px;flex-wrap:wrap;font-family:var(--mono);font-size:11px;
+    letter-spacing:.09em;color:var(--dim);padding:0 2px}
+  .seg{display:flex;border:1px solid var(--rule);border-radius:2px;overflow:hidden;flex:none}
+  .segb{font-size:10px;letter-spacing:.14em;text-transform:uppercase;padding:5px 11px;
+    background:#0d1218;border:0;border-right:1px solid var(--rule);color:#6f7c87;cursor:pointer}
+  .segb:last-child{border-right:0}
+  .segb.on{background:#1c2530;color:#e6edf4}
+  .lower{display:grid;grid-template-columns:212px 1fr;gap:8px}
+  #lapInfo{margin-top:4px}
+  .hint{font-size:11px;line-height:1.6;color:var(--dim2);margin-top:8px}
+  #verdict{max-height:23vh;min-height:0;overflow-y:auto}
+
+  /* ---------- map ---------- */
+  #mapWrap{position:relative;background:#000;border:1px solid var(--rule);border-radius:3px;
+    width:100%;aspect-ratio:1/1;overflow:hidden}
+  body.nomap #mapWrap,body.nomap #mapTools{display:none}
+  body.nomap #mapBlock{padding-bottom:2px}
+  #map{display:block;width:100%;height:100%}
+  .mapOverlay{
+    position:absolute;top:10px;left:12px;font-family:var(--mono);font-size:11px;
+    color:#8b98a3;line-height:1.7;pointer-events:none;letter-spacing:.06em;
+  }
+  .mapTools{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:5px;margin-top:7px}
+  .mapHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+  .mapHead span{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--dim2)}
+  body.touch .mapHead span{font-size:12px}
+  body.touch .mapTools .chip{font-size:11px;padding:8px 5px;text-align:center;letter-spacing:.06em}
+  .chip{
+    font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:4px 9px;
+    border:1px solid #262f38;border-radius:2px;background:#0b0f14;color:#6f7c87;cursor:pointer;
+  }
+  .chip.on{color:#e6edf4;border-color:#46586a;background:#131b24}
+  .chip:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--cyn);outline-offset:1px}
+  .zoomers{position:absolute;bottom:8px;right:8px;display:flex;gap:5px}
+
+  /* ---------- side rail ---------- */
+  #rail{display:flex;flex-direction:column;min-height:0;background:var(--bg);border-left:1px solid var(--rule)}
+  body.norail #rail{display:none}
+  .scroll{overflow-y:auto;overflow-x:hidden;flex:1;min-height:0;scrollbar-width:thin;scrollbar-color:#2a343e transparent}
+  .pad{padding:12px 14px 26px}
+
+
+  .row{display:flex;gap:8px}
+  .card{background:var(--panel);border:1px solid var(--rule);border-radius:3px;padding:9px 11px;margin-top:10px}
+  .lbl{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim2);margin-bottom:5px}
+  .val{font-family:var(--mono);font-size:22px;font-weight:600;letter-spacing:.02em;font-variant-numeric:tabular-nums}
+  .sub{font-family:var(--mono);font-size:11px;color:var(--dim)}
+
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+  .grid4 .card{margin:0;text-align:center;padding:7px 4px}
+  .grid4 .val{font-size:19px}
+
+  .clr{border-left:2px solid var(--amb)}
+  .clrtxt{font-size:15px;line-height:1.5;color:#f3e3c8;font-family:var(--cond);letter-spacing:.01em}
+  .clrtxt em{font-style:normal;color:var(--amb);font-weight:600}
+  .efc{margin-top:6px;font-family:var(--mono);font-size:11px;color:var(--dim)}
+
+  .timer{display:flex;align-items:baseline;gap:10px}
+  .timer .val{font-size:38px;color:var(--txt)}
+  .timer.run .val{color:var(--grn)}
+  .tstate{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim2)}
+  .timer.run .tstate{color:var(--grn)}
+
+  .btnrow{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+  .btn{
+    flex:1;min-width:64px;padding:8px 6px;background:var(--panel2);border:1px solid var(--rule);
+    border-radius:2px;cursor:pointer;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#aab6c0;
+  }
+  .btn:hover{border-color:#3d4a57;color:#e2e9f0}
+  .btn.sel{background:#1d2b23;border-color:var(--grn);color:var(--grn)}
+  .btn kbd{display:block;font-family:var(--mono);font-size:9px;color:var(--dim2);letter-spacing:0;margin-top:2px}
+
+  .verdict{margin-top:9px;padding:9px 11px;border-radius:2px;font-size:13px;line-height:1.55}
+  .verdict.ok{background:#12251c;border:1px solid #23543c;color:#9fe3c1}
+  .verdict.no{background:#2a1614;border:1px solid #5d2a26;color:#f0b4b0}
+  .verdict.info{background:#131b24;border:1px solid #2b343d;color:#a9b6c1}
+  .verdict b{font-weight:700;letter-spacing:.06em}
+  .verdict .how{display:block;margin-top:6px;color:#c9d4dd;font-size:12px}
+
+  table.laps{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px;margin-top:4px}
+  table.laps th{color:var(--dim2);font-weight:400;text-align:right;padding:3px 4px;font-size:10px;letter-spacing:.1em}
+  table.laps td{text-align:right;padding:3px 4px;border-top:1px solid #1b232b;color:#b9c5cf}
+  table.laps td:first-child,table.laps th:first-child{text-align:left}
+
+  .setline{display:flex;align-items:center;gap:8px;margin-top:7px;font-size:12px;color:var(--dim)}
+  .setline label{flex:1}
+  input[type=number],select{
+    background:#0b1015;border:1px solid var(--rule);border-radius:2px;padding:4px 6px;
+    font-family:var(--mono);font-size:12px;width:82px
+  }
+  input[type=checkbox]{accent-color:var(--grn);width:14px;height:14px}
+  .sect{margin-top:18px;font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--dim2);
+        border-bottom:1px solid var(--rule);padding-bottom:5px}
+
+  #sectorWrap{display:flex;gap:10px;align-items:center;margin-top:8px}
+  #sector{width:132px;height:132px;flex:none}
+  #sectorTxt{font-size:11px;line-height:1.6;color:var(--dim);font-family:var(--mono)}
+
+  /* ---------- help ---------- */
+  #help{
+    position:fixed;inset:0;background:rgba(3,5,8,.93);display:none;z-index:50;
+    padding:36px;overflow:auto;
+  }
+  #help.show{display:block}
+  .helpInner{max-width:820px;margin:0 auto}
+  .helpInner h2{font-size:13px;letter-spacing:.28em;text-transform:uppercase;color:var(--amb);font-weight:600;margin:22px 0 8px}
+  .helpInner h1{font-size:20px;letter-spacing:.2em;text-transform:uppercase;margin:0}
+  .keys{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:5px 20px}
+  .keys div{display:flex;gap:10px;font-size:13px;color:#b8c4ce;align-items:baseline}
+  .keys kbd{
+    font-family:var(--mono);font-size:11px;background:#161d25;border:1px solid var(--rule);
+    border-bottom-width:2px;border-radius:3px;padding:2px 6px;color:#e2e9f0;min-width:56px;text-align:center;flex:none
+  }
+  .helpInner p{font-size:13px;line-height:1.7;color:#93a1ac;max-width:66ch}
+  .helpInner p.lede{color:#b8c4ce;font-size:14px;margin-top:10px}
+  .helpInner p b{color:#cfd9e2;font-weight:600}
+  .keys.wide{grid-template-columns:1fr}
+  .keys.wide div{align-items:flex-start}
+  .closeHint{font-size:12px;color:var(--dim2);letter-spacing:.14em;text-transform:uppercase;margin-top:26px}
+  /* ---------- touch bar ---------- */
+  #touchbar{display:none}
+  body.touch #touchbar{
+    display:flex;gap:10px;flex:none;align-items:stretch;
+    padding:10px max(14px,env(safe-area-inset-left)) calc(10px + env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-right));
+    border-top:1px solid var(--rule);background:var(--panel)}
+  .tb{flex:1;min-height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    background:var(--panel2);border:1px solid var(--rule);border-radius:7px;color:#aab6c0;
+    font-size:12px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;
+    touch-action:none;-webkit-tap-highlight-color:transparent;-webkit-user-select:none}
+  .tb .glyph{font-size:22px;line-height:1}
+  .tb .big{font-family:var(--mono);font-size:25px;line-height:1;color:#e6edf4;letter-spacing:0;font-variant-numeric:tabular-nums}
+  .tb.turn{flex:1.25}
+  .tb.mult{flex:0 0 74px;font-family:var(--mono);font-size:17px;letter-spacing:0}
+  .tb.act,.tb.on{background:#17281f;border-color:var(--grn);color:var(--grn)}
+  .tb.act .big,.tb.on .big{color:var(--grn)}
+  #railClose{display:none}
+  body.touch #railClose{display:block;width:100%;margin-bottom:4px}
+
+  /* ---------- touch sizing ---------- */
+  body.touch{-webkit-text-size-adjust:100%}
+  body.touch .kbdhint{display:none}
+  body.touch .hdrbtn{font-size:13px;padding:9px 14px}
+  body.touch .brand{font-size:15px}
+  body.touch .lbl{font-size:11px}
+  body.touch .val{font-size:27px}
+  body.touch .grid4 .val{font-size:24px}
+  body.touch .clrtxt{font-size:18px;line-height:1.45}
+  body.touch .efc{font-size:12.5px}
+  body.touch #stageStatus{font-size:13px;gap:14px}
+  body.touch .segb{font-size:12px;padding:10px 15px}
+  body.touch .chip{font-size:13px;padding:9px 13px}
+  body.touch .btn{font-size:14px;padding:14px 8px}
+  body.touch .btn kbd{display:none}
+  body.touch .setline{font-size:14px;margin-top:11px}
+  body.touch input[type=number],body.touch select{font-size:16px;padding:8px 7px;width:96px}
+  body.touch input[type=checkbox]{width:22px;height:22px}
+  body.touch .sect{font-size:12px;padding-bottom:8px;margin-top:22px}
+  body.touch .hint{font-size:13px}
+  body.touch table.laps td{font-size:13px;padding:6px 4px}
+  body.touch table.laps th{font-size:12px}
+  body.touch .timer .val{font-size:40px}
+  body.touch .tstate{font-size:12px}
+  body.touch .verdict{font-size:15px;line-height:1.5}
+  body.touch .verdict .how{font-size:14px}
+  body.touch #verdict{max-height:none;overflow-y:auto}
+  body.touch .helpInner h1{font-size:24px}
+  body.touch .keys div{font-size:15px}
+  body.touch .helpInner p{font-size:15px}
+  #timerCard{cursor:pointer}
+
+  /* ---------- landscape tablet: instrument left, everything else right ---------- */
+  /* the clearance stays a full-width banner; below it the body splits */
+  @media (orientation:landscape){
+    body.touch #stageBody{flex-direction:row}
+    body.touch #sideCol{flex:0 0 340px;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:3px}
+  }
+  @media (orientation:portrait){
+    body.touch #sideCol{flex:0 0 auto;max-height:46vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+    body.touch #mapBlock{max-width:460px;margin:0 auto}
+  }
+  body.touch #timerCard{display:none}
+  body.touch .lower{grid-template-columns:1fr}
+  body.touch #mapSlot{display:block}
+  body.touch #mapSlot #mapWrap{aspect-ratio:16/10}
+  body.touch #mapSlot .mapTools{grid-template-columns:repeat(4,1fr);gap:4px}
+  body.touch #mapSlot .mapTools .chip{font-size:10px;padding:8px 3px}
+  /* ---------- narrow: the rail becomes a slide-over ---------- */
+  @media (max-width:1200px){
+    main{grid-template-columns:minmax(0,1fr)}
+    #rail{position:fixed;top:0;right:0;bottom:0;width:min(410px,92vw);z-index:40;
+      box-shadow:-24px 0 48px rgba(0,0,0,.62)}
+    body.norail #rail{display:none}
+  }
+  .scroll{-webkit-overflow-scrolling:touch}
+  canvas{touch-action:none;-webkit-touch-callout:none}
+  button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+
+  /* ---------- entry prompt ---------- */
+  #entryPrompt{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
+    background:rgba(3,5,8,.86);padding:24px}
+  #entryPrompt.show{display:flex}
+  .epBox{background:var(--panel);border:1px solid var(--amb);border-radius:6px;padding:22px 22px 14px;
+    max-width:540px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,.65)}
+  .epTitle{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--amb);margin-bottom:9px}
+  .epQ{font-size:21px;color:var(--txt);margin-bottom:7px}
+  .epSub{font-size:14px;line-height:1.55;color:var(--dim);margin-bottom:17px}
+  .epBtns{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .epBtns .btn{padding:18px 8px;font-size:15px}
+  .epSkip{margin-top:10px;width:100%;background:transparent;border:0;color:var(--dim2);
+    font-size:13px;cursor:pointer;padding:10px;letter-spacing:.06em}
+  .epSkip:hover{color:var(--txt)}
+  body.touch .epQ{font-size:23px} body.touch .epSub{font-size:15px}
+  body.touch .epBtns .btn{padding:22px 8px;font-size:16px}
+  body.touch .epSkip{font-size:15px;padding:14px}
+
+  /* ---------- error banner: never show a masked "Script error" again ---------- */
+  #errBar{display:none;position:fixed;left:0;right:0;bottom:0;z-index:70;cursor:pointer;
+    background:#4a1512;color:#ffd9d5;font-family:var(--mono);font-size:12px;line-height:1.5;
+    padding:10px 14px calc(10px + env(safe-area-inset-bottom));border-top:1px solid #7d2820;white-space:pre-wrap}
+
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="brand"><b>VOR HOLDING</b> TRAINER</div>
+    <div class="spacer"></div>
+    <div class="state" id="hdrState" style="color: var(--grn);"></div>
+    <div class="kbdhint">A / D turn &nbsp;·&nbsp; Space fast-fwd &nbsp;·&nbsp; T timer &nbsp;·&nbsp; H help</div>
+    <button class="hdrbtn" id="btnHelp">Controls</button>
+    <button class="hdrbtn" id="btnRail">Panel</button>
+  </header>
+
+  <main>
+    <section id="stage">
+      <div class="card clr">
+        <div class="lbl">ATC clearance</div>
+        <div class="clrtxt" id="clearance">N1204W, hold <em>north</em> of the MZB VOR on the <em>three five four</em> radial, <em>one minute legs</em>.</div>
+        <div class="efc" id="efc">MISSION BAY VOR  ·  inbound course 174  ·  outbound heading 354  ·  timed hold — fly the clock  ·  EFC 0653Z</div>
+      </div>
+
+      <div id="stageBody">
+        <div id="instCol">
+          <div id="hsiBox"><canvas id="dg" style="display: block; height: 647px; width: 647px;" width="647" height="647"></canvas><canvas id="hsi" style="height: 898px; width: 898px; cursor: grab;" width="898" height="898"></canvas></div>
+          <div class="statusRow">
+            <div id="stageStatus"><span>GS 100 KT</span><span>TAS 100 KT</span><span style="color:#6f7c87">HOLDING SIDE</span></div>
+            <div class="seg">
+              <button class="segb on" data-hsi="mech">Steam gauges</button>
+              <button class="segb" data-hsi="g5vloc">G5 VOR</button>
+              <button class="segb" data-hsi="g5gps">G5 GPS</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="sideCol">
+          <div class="grid4">
+            <div class="card"><div class="lbl">HDG</div><div class="val" id="rHdg">098</div></div>
+            <div class="card"><div class="lbl">OBS</div><div class="val" id="rObs">174</div></div>
+            <div class="card"><div class="lbl">Radial</div><div class="val" id="rRad">282</div></div>
+            <div class="card"><div class="lbl">DME</div><div class="val" id="rDme">13.9</div></div>
+          </div>
+
+          <div class="lower">
+            <div class="card" id="timerCard">
+              <div class="lbl">Timer</div>
+              <div class="timer" id="timerBox">
+                <div class="val" id="rTimer">0:00</div>
+                <div class="tstate" id="tState">stopped</div>
+              </div>
+              <div class="sub" id="lapInfo">1:00 legs</div>
+            </div>
+            <div class="card">
+              <div class="lbl">Your entry call</div>
+              <div class="btnrow">
+                <button class="btn" data-e="direct">Direct<kbd>1</kbd></button>
+                <button class="btn" data-e="parallel">Parallel<kbd>2</kbd></button>
+                <button class="btn" data-e="teardrop">Teardrop<kbd>3</kbd></button>
+              </div>
+            </div>
+          </div>
+
+          <div id="mapSlot"></div>
+          <div id="verdict"><div class="verdict info">Call your entry before the fix if you want it checked. Optional — you can just fly.</div></div>
+          <div id="sectorWrap" style="display:none">
+            <canvas id="sector"></canvas>
+            <div id="sectorTxt"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside id="rail"><div class="scroll"><div class="pad">
+      <button class="btn" id="railClose">Close panel</button>
+      <div id="railMapSlot"><div id="mapBlock">
+        <div class="mapHead"><span>Map</span><button class="chip" id="mapOnOff">Hide</button></div>
+        <div id="mapWrap">
+          <canvas id="map" width="341" height="341"></canvas>
+          <div class="mapOverlay" id="mapText">098° HDG &nbsp; 100 KT GS<br>R-282 &nbsp; 13.9 DME<br><span style="color:#7f8f9a">holding side</span></div>
+          <div class="zoomers">
+            <button class="chip" id="zin">+</button><button class="chip" id="zout">−</button>
+          </div>
+        </div>
+        <div class="mapTools" id="mapTools">
+        <button class="chip on" data-t="plane">Plane</button>
+        <button class="chip on" data-t="fix">Fix</button>
+        <button class="chip on" data-t="course">Course</button>
+        <button class="chip on" data-t="crumbs">Breadcrumbs</button>
+        <button class="chip" data-t="ideal">Ideal pattern</button>
+        <button class="chip" data-t="rings">DME rings</button>
+        <button class="chip" data-t="rose">Compass rose</button>
+          <button class="chip" data-t="follow">Follow plane</button>
+        </div>
+      </div></div>
+
+      <div class="sect">Tuning</div>
+      <div class="setline"><label>OBS / selected course</label><input type="number" id="setObs" min="0" max="359" step="1" value="174"></div>
+      <div class="setline"><label>Heading bug</label><input type="number" id="setBug" min="0" max="359" step="1" value="98"></div>
+      <div class="setline"><label>Gyro drift (°/hr, mechanical DG)</label><input type="number" id="setDrift" min="0" max="60" step="1" value="0"></div>
+      <div class="btnrow"><button class="btn" id="btnAlign">Align DG to compass<kbd>Shift+K</kbd></button></div>
+      <div class="hint">Drag either instrument face, roll the wheel over
+ it, or use the keys. On the mechanical pair the left gauge is the DG 
+and the right is the CDI head.</div>
+
+      <div class="sect">Flight</div>
+      <div class="setline"><label>True airspeed (kt)</label><input type="number" id="setTas" min="60" max="250" step="5" value="100"></div>
+      <div class="setline"><label>Wind from / kt</label>
+        <input type="number" id="setWdir" min="0" max="359" step="10" value="0" style="width:56px">
+        <input type="number" id="setWspd" min="0" max="60" step="1" value="0" style="width:56px"></div>
+      <div class="setline"><label>GPS CDI scale</label><select id="setGps">
+        <option value="2">Enroute 2.0 NM</option><option value="1" selected="selected">Terminal 1.0 NM</option><option value="0.3">Approach 0.30 NM</option></select></div>
+      <div class="setline"><label>Altitude above station (ft)</label><input type="number" id="setAlt" min="500" max="20000" step="500" value="4000"></div>
+      <div class="setline"><label>Cone half-angle from vertical (°)</label><input type="number" id="setCone" min="5" max="60" step="1" value="30"></div>
+      <div class="setline" style="margin-top:2px"><label style="color:var(--dim2);font-size:11px">Cone of confusion <span id="coneTxt">≈ 0.38 NM radius, station at 60° elevation, about 27 s to cross</span></label></div>
+      <div class="setline"><label>Fast-forward (hold Space)</label>
+        <select id="setFF"><option value="2">2×</option><option value="4">4×</option><option value="8" selected="selected">8×</option><option value="16">16×</option></select></div>
+      <div class="setline"><label>Sim rate</label>
+        <select id="setRate"><option value="1" selected="selected">1×</option><option value="2">2×</option><option value="4">4×</option><option value="8">8×</option></select></div>
+      <div class="setline"><label for="setTouch">Touch controls</label><input type="checkbox" id="setTouch"></div>
+      <div class="setline"><label for="setLatch">Latched turns (tap instead of hold)</label><input type="checkbox" id="setLatch"></div>
+      <div class="setline"><label for="setAuto">Auto-start timer at fix &amp; wings level</label><input type="checkbox" id="setAuto"></div>
+      <div class="setline"><label for="setCheat">Show entry sector diagram (cheat)</label><input type="checkbox" id="setCheat"></div>
+
+      <div class="sect">Scenario</div>
+      <div class="setline"><label>Radial</label><input type="number" id="setRadial" min="0" max="359" step="1" value="354"></div>
+      <div class="setline"><label>Turns</label><select id="setTurns"><option value="right" selected="selected">Right (standard)</option><option value="left">Left</option></select></div>
+      <div class="setline"><label>Hold fix (DME out on the radial, 0 = overhead)</label>
+        <input type="number" id="setFixDme" min="0" max="60" step="1" value="0"></div>
+      <div class="setline"><label>Legs</label><select id="setLeg">
+        <option value="60" selected="selected">1 minute · timed</option><option value="90">1.5 minutes · timed</option>
+        <option value="d4">4 miles · RNAV</option><option value="d5">5 miles · RNAV</option>
+        <option value="d10">10 miles · RNAV</option></select></div>
+      <div class="setline"><label>Arrival</label><select id="setStart">
+        <option value="direct" selected="selected">Direct to the fix</option><option value="airway">On an airway (further out)</option><option value="vectors">Off vectors (close in)</option></select></div>
+      <div class="setline"><label>Force entry type</label><select id="setForce">
+        <option value="any" selected="selected">Any (random)</option><option value="direct">Direct</option><option value="parallel">Parallel</option><option value="teardrop">Teardrop</option></select></div>
+      <div class="setline"><label for="setRandWind">Randomise wind on new scenario</label><input type="checkbox" id="setRandWind"></div>
+      <div class="setline"><label for="setReal">Omit "right turns" (real phraseology)</label><input type="checkbox" id="setReal" checked="checked"></div>
+      <div class="btnrow">
+        <button class="btn" id="btnNew">New random<kbd>N</kbd></button>
+        <button class="btn" id="btnApply">Apply fields</button>
+      </div>
+      <div class="btnrow">
+        <button class="btn" id="btnReset">New arrival<kbd>Shift+N</kbd></button>
+        <button class="btn" id="btnRestart">Restart this one<kbd>Shift+R</kbd></button>
+      </div>
+      <div class="hint">
+        <b style="color:#8e9ba6">New random</b> rolls a fresh clearance and a fresh arrival.
+        <b style="color:#8e9ba6">Apply fields</b> builds the clearance from the boxes above, then gives you an arrival for it.
+        <b style="color:#8e9ba6">New arrival</b> keeps the clearance and drops you in from somewhere else.
+        <b style="color:#8e9ba6">Restart this one</b> puts you back exactly where you started, clock and trail wiped — for reflying an entry you fluffed.
+      </div>
+
+      <div class="sect">Fix crossings</div>
+      <table class="laps"><thead><tr><th>#</th><th>Lap</th><th>Hdg</th><th>Miss</th><th>Max off fix</th></tr></thead><tbody id="lapBody"></tbody></table>
+    </div></div></aside>
+  </main>
+
+  <div id="entryPrompt">
+    <div class="epBox">
+      <div class="epTitle">Over the fix</div>
+      <div class="epQ">Which entry are you flying?</div>
+      <div class="epSub">You reached the fix without calling one. The 
+simulation is paused — pick the entry you would fly and it will resume 
+and mark you.</div>
+      <div class="epBtns">
+        <button class="btn" data-e="direct">Direct<kbd>1</kbd></button>
+        <button class="btn" data-e="parallel">Parallel<kbd>2</kbd></button>
+        <button class="btn" data-e="teardrop">Teardrop<kbd>3</kbd></button>
+      </div>
+      <button class="epSkip" id="epSkip">Skip — just show me the recommended entry</button>
+    </div>
+  </div>
+
+  <div id="errBar"></div>
+
+  <div id="touchbar">
+    <button class="tb turn" id="tbL"><span class="glyph">◀</span>Left</button>
+    <button class="tb" id="tbTimer"><span class="big" id="tbTime">0:00</span><span id="tbTimerLbl">Tap to start</span></button>
+    <button class="tb" id="tbFF"><span class="glyph">⏩</span>Speed up</button>
+    <button class="tb mult" id="tbMult">×8</button>
+    <button class="tb turn" id="tbR"><span class="glyph">▶</span>Right</button>
+  </div>
+</div>
+
+<div id="help">
+  <div class="helpInner">
+    <h1>Controls</h1>
+    <p class="lede">Hold-to-turn is the default. Everything else is a tap. Nothing here needs the mouse, but the mouse works everywhere the keys do.</p>
+
+    <h2>Fly the aeroplane</h2>
+    <div class="keys">
+      <div><kbd>A</kbd><span>Standard-rate turn left, while held</span></div>
+      <div><kbd>D</kbd><span>Standard-rate turn right, while held</span></div>
+      <div><kbd>← →</kbd><span>Same as A and D</span></div>
+      <div><kbd>Space</kbd><span>Fast-forward while held</span></div>
+      <div><kbd>Z</kbd><span>Pause and resume</span></div>
+    </div>
+
+    <h2>Timer</h2>
+    <div class="keys">
+      <div><kbd>T</kbd><span>Start or stop</span></div>
+      <div><kbd>Shift+T</kbd><span>Restart from zero</span></div>
+      <div><kbd>R</kbd><span>Reset to zero, stopped</span></div>
+    </div>
+
+    <h2>Tuning</h2>
+    <div class="keys">
+      <div><kbd>[</kbd><span>OBS 1° left</span></div>
+      <div><kbd>]</kbd><span>OBS 1° right</span></div>
+      <div><kbd>P</kbd><span>OBS 10° left</span></div>
+      <div><kbd>\</kbd><span>OBS 10° right</span></div>
+      <div><kbd>O</kbd><span>Snap OBS to the inbound course</span></div>
+      <div><kbd>;</kbd><span>Heading bug 1° left</span></div>
+      <div><kbd>'</kbd><span>Heading bug 1° right</span></div>
+      <div><kbd>K</kbd><span>Bug to present heading</span></div>
+      <div><kbd>Shift+K</kbd><span>Align the DG to the compass</span></div>
+      <div><kbd>Enter</kbd><span>Press the G5 knob: swap HDG / CRS</span></div>
+    </div>
+    <p>Hold the OBS and bug keys to run them continuously. Shift makes them step 10°.</p>
+
+    <h2>Call your entry</h2>
+    <div class="keys">
+      <div><kbd>1</kbd><span>Direct</span></div>
+      <div><kbd>2</kbd><span>Parallel</span></div>
+      <div><kbd>3</kbd><span>Teardrop</span></div>
+    </div>
+    <p>Call it before you reach the fix and the recommended entry is 
+revealed the moment you cross, with your call marked against it. Reach 
+the fix without having called one and the simulation stops and asks, so 
+you have to commit before you see the answer. There is a skip on that 
+prompt if you would rather just be told.</p>
+
+    <h2>Scenario</h2>
+    <div class="keys">
+      <div><kbd>N</kbd><span>New random clearance and arrival</span></div>
+      <div><kbd>Shift+N</kbd><span>Same clearance, new arrival</span></div>
+      <div><kbd>Shift+R</kbd><span>Restart this one from the same start</span></div>
+    </div>
+
+    <h2>Display</h2>
+    <div class="keys">
+      <div><kbd>G</kbd><span>Cycle steam gauges → G5 VOR → G5 GPS</span></div>
+      <div><kbd>M</kbd><span>Map on and off</span></div>
+      <div><kbd>C</kbd><span>Collapse the side panel</span></div>
+      <div><kbd>B</kbd><span>Breadcrumbs</span></div>
+      <div><kbd>I</kbd><span>Ideal pattern overlay</span></div>
+      <div><kbd>F</kbd><span>Follow the plane or centre the fix</span></div>
+      <div><kbd>-</kbd><span>Zoom the map out</span></div>
+      <div><kbd>=</kbd><span>Zoom the map in</span></div>
+      <div><kbd>H</kbd><span>This page</span></div>
+      <div><kbd>Esc</kbd><span>Close this page</span></div>
+    </div>
+
+    <h2>Mouse</h2>
+    <div class="keys wide">
+      <div><kbd>Drag</kbd><span>On the CDI head or the G5, turns the OBS. On the DG, moves the heading bug.</span></div>
+      <div><kbd>Wheel</kbd><span>Same two, one degree a click, ten with Shift held. Over the map it zooms.</span></div>
+      <div><kbd>Double-click</kbd><span>On the DG knob, slews the gyro back into alignment.</span></div>
+      <div><kbd>G5 knob</kbd><span>Click it to swap between the HDG bug 
+and CRS, drag round it to turn it. The field it is editing is the one 
+highlighted at the top of the display.</span></div>
+    </div>
+
+    <h2>The four scenario buttons</h2>
+    <p><b>New random</b> rolls a fresh clearance and a fresh arrival — a completely new problem. <b>Apply fields</b>
+ takes the radial, turns, legs, arrival and forced entry type from the 
+boxes and builds that clearance, then gives you an arrival for it. <b>New arrival</b> keeps the clearance you have and drops you in from somewhere else, which is how you drill one hold from every direction. <b>Restart this one</b>
+ puts you back on the exact heading and position you began with, clock 
+and trail wiped, so you can refly an entry you got wrong and compare.</p>
+
+    <h2>Three indicators, three behaviours</h2>
+    <p>The steam gauge option is a period panel: a VOR/LOC course 
+deviation head with its compass card driven by the OBS knob, flown 
+beside a separate directional gyro. The card shows your selected course 
+at the top index, not your heading, so the two instruments have to be 
+cross-referenced — and if you set the reciprocal by mistake, the head 
+reverse-senses exactly as the real thing does. The glideslope pointer 
+sits parked behind its red GS flag, since a VOR is tuned. The needle is a
+ moving-coil pointer with mass and damping: it lags, overshoots, drifts 
+with receiver noise, and knocks against its stops. When the signal 
+degrades a red NAV flag is pulled into the annunciator window by its 
+spring, and the TO and FROM triangles fade out together through 
+ambiguity.</p>
+    <p>The G5 is a renderer, not a movement. Deviation is drawn where 
+the computed number says, with no inertia and nothing to bang against, 
+and TO/FROM switches cleanly rather than fading. When the signal fails 
+its validity test the deviation bar and bearing pointer are removed 
+outright and an amber NAV annunciation appears — no gradual warning, it 
+is either there or it is not. That difference matters over the station: 
+the mechanical unit tells you it is losing confidence, while the digital
+ one hands you a clean picture right up until it hands you nothing.</p>
+
+    <h2>On an iPad</h2>
+    <p>Touch controls switch themselves on when the browser reports a 
+coarse pointer, and there is a checkbox in the Flight panel to force 
+them either way if you want to see them on a desktop. They bring up a 
+control bar along the bottom: hold Left or Right to turn, tap Speed up 
+to run the clock fast and tap it again to drop back, and the number 
+beside it cycles the multiplier.</p>
+    <p>The stopwatch works the way a stopwatch does. Tap to start, tap 
+to stop, tap the stopped clock again to zero it. That applies both to 
+the bar and to the timer card on the panel. Everything else is already 
+touchable: drag round the OBS knob on the CDI head or the G5 encoder, 
+press the G5 encoder to swap between HDG and CRS, drag the DG to move 
+the heading bug, and double tap the DG knob to realign the gyro.</p>
+    <p>The map moves with the layout. On a desktop it sits in the side 
+rail; on a tablet, where the rail is a slide-over that would bury it, it
+ moves into the stage itself — under the readouts in landscape, below 
+them in portrait. It is the same element and the same canvas either way,
+ so every layer toggle comes with it. Hide and Show on the map header 
+collapses it when you want the space back, which is the same thing the M
+ key does.</p>
+    <p>In landscape the instrument moves to its own column on the left 
+with the clearance, readouts and entry buttons stacked beside it, so the
+ gauge gets the full height of the screen. Below about 1,200 points wide
+ the side panel becomes a slide-over — the Panel button in the header 
+opens it and Close panel puts it away. Added to the Home Screen the app 
+runs full screen with no browser chrome, and it asks for a screen wake 
+lock so the iPad will not dim on you halfway round a lap.</p>
+
+    <h2>Working the G5</h2>
+    <p>The real unit has exactly one control: a push-and-turn rotary 
+encoder at the lower right, and this one behaves the same way. Press it 
+to swap which field the knob is editing, and the selected field is shown
+ highlighted at the top of the display, the way Garmin marks a value 
+that is live for editing. Then turn the knob to change it. Rolling the 
+wheel anywhere over the unit turns the knob too, one degree a detent and
+ ten with Shift held, and the OBS and heading bug keys keep working 
+independently of whichever field the knob happens to be on.</p>
+
+    <h2>What ATC is actually giving you</h2>
+    <p>Two things in the clearance decide how you fly the pattern. A hold over the station or at a DME fix is a <b>timed</b> hold — one minute legs below 14,000, one and a half above — and you fly it on the clock. Legs given in <b>miles</b>
+ are an RNAV hold, because measuring a leg by distance needs GPS; the 
+clock stops mattering and you turn when the distance comes up. The panel
+ under the clearance tells you which one you have been handed.</p>
+    <p>The fix does not have to be the station. Set a DME distance and 
+the hold moves out along the radial, exactly as when a controller says 
+to hold fifteen miles out on the two two six radial. The DME window 
+still reads to the VOR, so fifteen DME is how you identify the fix, and 
+the map shows it as a triangle on the radial with the station still 
+drawn back at the origin. Everything else is unchanged: the inbound 
+course is still the reciprocal of the radial and the pattern still lies 
+on the far side. One useful side effect is that a hold out at a DME fix 
+never puts you in the cone of confusion, so the needle stays honest all 
+the way across.</p>
+
+    <h2>VOR against GPS</h2>
+    <p>A VOR measures an angle, so its deviation is a fixed number of 
+degrees however far out you are, and it tightens without limit as you 
+close on the station. GPS measures cross-track distance, so full scale 
+is a fixed number of miles — 2.0 enroute, 1.0 terminal, 0.30 on approach
+ — and the bar behaves the same a mile from the fix as it does thirty. 
+Fly the same hold on G5 VOR and then on G5 GPS and watch what happens 
+overhead: the VOR bar becomes unusable and flags, while the GPS bar 
+tracks straight through, flipping TO to FROM cleanly at the abeam line. 
+There is no cone of confusion on GPS because nothing is being measured 
+from the station.</p>
+
+    <h2>Station passage</h2>
+    <p>The cone of confusion is modelled with a half-angle of 30° from 
+the vertical, so it begins once the station climbs above about 60° of 
+elevation and its radius is a little over half your height above the 
+station. At 4,000 ft that is roughly 0.4 NM, matching the usual rule of 
+thumb of half a mile at 6,000 ft and three miles at FL360. Both the 
+altitude and the half-angle are adjustable in the Flight panel.</p>
+    <p>Much of what you see near the station is not the cone at all. A 
+VOR measures angles, so at half a mile out full-scale deflection is 
+under 100 yards of lateral offset — the needle gets hypersensitive 
+purely from geometry, before any signal degradation. That part is in the
+ model whatever you set the cone to. The first positive indication of 
+station passage is the first complete reversal of the TO/FROM 
+indication, not the needle.</p>
+
+    <h2>Reading the HSI and the CDI head</h2>
+    <p>Both are scaled for VOR. The G5 shows two dots either side at 5° a
+ dot; the mechanical head shows five at 2°. Full deflection is 10° on 
+both. The magenta needle on the mechanical panel and the cyan one on the
+ G5 are bearing pointers to the station.</p>
+
+    <h2>How the timing works</h2>
+    <p>Outbound timing starts abeam the fix, or wings level outbound if 
+you never get an abeam. Inbound timing starts wings level on the inbound
+ course. If the inbound leg is not the length you were cleared for, 
+adjust the outbound leg by the difference on the next lap.</p>
+    <p>With wind, apply roughly triple the inbound drift correction on 
+the outbound leg, and shorten or lengthen the outbound time to make the 
+inbound leg come out right. Turn on the gyro drift setting if you want 
+the mechanical panel to make you work for the heading as well.</p>
+
+    <div class="closeHint">Press H or Esc to close</div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* ============================ helpers ============================ */
+function showFatal(where, err) {
+  const el = document.getElementById('errBar');
+  const msg = `${where}: ${(err && err.message) || err}` +
+              (err && err.stack ? '\n' + String(err.stack).split('\n').slice(1, 3).join('\n') : '');
+  if (el) { el.textContent = msg + '\n(tap to dismiss)'; el.style.display = 'block'; }
+  console.error(where, err);
+}
+addEventListener('error', e => showFatal('Error', e.error || { message: e.message + ' @' + e.lineno + ':' + e.colno }));
+addEventListener('unhandledrejection', e => showFatal('Promise', e.reason));
+addEventListener('DOMContentLoaded', () => {
+  const el = document.getElementById('errBar');
+  if (el) el.onclick = () => { el.style.display = 'none'; };
+});
+
+const RAD = Math.PI / 180;
+const n360 = a => ((a % 360) + 360) % 360;
+const n180 = a => { const x = n360(a); return x > 180 ? x - 360 : x; };
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const pad3 = v => String(Math.round(n360(v)) % 360).padStart(3, '0');
+const mmss = s => {
+  const neg = s < 0; s = Math.abs(s);
+  return (neg ? '-' : '') + Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
+};
+const $ = id => document.getElementById(id);
+
+const VORS = [
+  ['MZB','MISSION BAY'], ['PGY','POWAY'], ['OCN','OCEANSIDE'], ['JLI','JULIAN'],
+  ['PDZ','PARADISE'],    ['SLI','SEAL BEACH'], ['SXC','SANTA CATALINA'],
+  ['IPL','IMPERIAL'],    ['TRM','THERMAL'], ['PSP','PALM SPRINGS'], ['EED','NEEDLES']
+];
+const CALLS = ['N2145T','N738DK','N51219','N9032C','N466RS','N1204W','N63821'];
+const PTS = ['north','northeast','east','southeast','south','southwest','west','northwest'];
+const compass8 = b => PTS[Math.round(n360(b) / 45) % 8];
+const spellNum = s => String(s).split('').map(d => ['zero','one','two','three','four','five','six','seven','eight','nine'][+d]).join(' ');
+
+/* ============================ state ============================ */
+const S = {
+  ac: { x: 0, y: -12, hdg: 0, tas: 100, turn: 0 },
+  turnCmd: 0, latch: 0,
+  vor: VORS[0], call: CALLS[0],
+  radial: 217, turns: 'right', legSec: 60, legNm: 0, fixDme: 0,
+  obs: 37, bug: 0, alt: 4000, coneAng: 30, hsiStyle: 'mech', navSrc: 'vloc', gpsScale: 1.0, gyroDrift: 0, gyroErr: 0, startState: null,
+  prompting: false, g5Field: 'hdg', knobAngle: 0, hitG5: null, hitObs: null, hitHdg: null,
+  nav: { pos: 0, vel: 0, tf: -1, flag: 0, valid: 1, brg: 0, n1: 0, n2: 0, n3: 0, n1t: 0, n2t: 0, n3t: 0, nT: 0 },
+  wind: { dir: 0, spd: 0 },
+  rate: 1, paused: false, ff: false, ffMult: 8,
+  startMode: 'direct', forceEntry: 'any', randWind: false,
+  timer: { t: 0, run: false },
+  crumbs: [], crumbAcc: 0,
+  zoom: 26, follow: false,
+  call_entry: null, answer: null,
+  crossings: [], lastCrossT: null, elapsed: 0,
+  prevDist: null, crossCool: 0, maxDme: 0,
+  efcMin: 0,
+  show: { plane: 1, fix: 1, course: 1, crumbs: 1, ideal: 0, rings: 0, rose: 0, follow: 0 },
+  autoTimer: false, cheat: false, realPhrase: true,
+  wasTurning: false
+};
+
+/* The holding fix is either the station itself or a point out along the radial.
+   DME always reads to the VOR; the pattern, the crossings and the map all key
+   off the fix. Both sit on the same radial line, so course geometry is shared. */
+const fixPos = () => ({ x: S.fixDme * Math.sin(S.radial * RAD), y: S.fixDme * Math.cos(S.radial * RAD) });
+const fixDist = () => { const F = fixPos(); return Math.hypot(S.ac.x - F.x, S.ac.y - F.y); };
+const dgHdg = () => S.hsiStyle === 'mech' ? n360(S.ac.hdg + S.gyroErr) : S.ac.hdg;
+const inbound = () => n360(S.radial + 180);
+const outbound = () => n360(S.radial);
+const teardropHdg = () => n360(S.radial + (S.turns === 'right' ? -30 : 30));
+const holdSideSign = () => (S.turns === 'right' ? 1 : -1);   // right of inbound course
+
+function windVec() {
+  const w = S.wind.spd / 3600;
+  return { x: -w * Math.sin(S.wind.dir * RAD), y: -w * Math.cos(S.wind.dir * RAD) };
+}
+function radialOf() { return n360(Math.atan2(S.ac.x, S.ac.y) / RAD); }   // VOR is at 0,0
+function dme() { return Math.hypot(S.ac.x, S.ac.y); }
+function gsVec() {
+  const v = S.ac.tas / 3600, w = windVec();
+  return { x: v * Math.sin(S.ac.hdg * RAD) + w.x, y: v * Math.cos(S.ac.hdg * RAD) + w.y };
+}
+function turnRadius() { return (S.ac.tas / 3600) / (3 * RAD); }  // nm at standard rate
+
+/* ---- receiver / indicator model ----
+   Cone of confusion: measured from the vertical, the half-angle is about 30 deg,
+   i.e. the signal goes unusable once the station is above roughly 60 deg of
+   elevation. That puts the radius at a little over half the height above the
+   station, which matches the usual rule of thumb of half a mile at 6,000 ft and
+   three miles at FL360. Signal quality falls off inside it, and the TO/FROM sense
+   is separately ambiguous when the aircraft sits 90 deg from the selected course.
+   Neither one blanks the needle: the needle is a physical pointer that keeps
+   wandering while the spring-loaded NAV flag swings into view. */
+const smooth = t => t * t * (3 - 2 * t);
+function coneR() { return Math.max(0.03, (S.alt / 6076) * Math.tan(S.coneAng * RAD)); }
+function coneQ() { return smooth(clamp((dme() - 0.30 * coneR()) / (1.20 * coneR()), 0, 1)); }
+function ambQ()  { return clamp((Math.abs(Math.abs(n180(radialOf() - S.obs)) - 90) - 1) / 3, 0, 1); }
+
+const STOP = 11.5;          // mechanical stop, just past full scale
+
+/* GPS deviation is linear cross-track in NM, not an angle, so it neither blows up
+   near the fix nor cares about the cone. Scaled into the same +/-10 "degree"
+   units the display already uses so full scale lands on the outer dot. */
+function gpsDev() {
+  const rgt = { x: Math.sin((S.obs + 90) * RAD), y: Math.cos((S.obs + 90) * RAD) };
+  const u   = { x: Math.sin(S.obs * RAD),        y: Math.cos(S.obs * RAD) };
+  const F = fixPos(), px = S.ac.x - F.x, py = S.ac.y - F.y;
+  const xtk   = px * rgt.x + py * rgt.y;             // + = aircraft right of course
+  const along = px * u.x   + py * u.y;               // - = fix still ahead
+  return { to: along < 0, xtk, raw: -(xtk / S.gpsScale) * 10 };
+}
+function devNow() { return (S.hsiStyle === 'g5' && S.navSrc === 'gps') ? gpsDev() : cdi(); }
+
+function updNav(dt) {
+  const N = S.nav;
+  dt = Math.min(dt, 1.0);          // needle integration stays bounded at extreme sim rates
+  // three slowly varying noise channels; the damped needle filters them into drift
+  N.nT -= dt;
+  if (N.nT <= 0) {
+    N.n1t = Math.random() * 2 - 1; N.n2t = Math.random() * 2 - 1; N.n3t = Math.random() * 2 - 1;
+    N.nT = 0.12 + Math.random() * 0.28;
+  }
+  const kn = Math.min(1, dt * 7);
+  N.n1 += (N.n1t - N.n1) * kn; N.n2 += (N.n2t - N.n2) * kn; N.n3 += (N.n3t - N.n3) * kn;
+
+  if (S.hsiStyle === 'g5' && S.navSrc === 'gps') {
+    /* GPS. Position is known directly, so there is no cone and no ambiguity
+       zone — the bar stays live and calm straight across the fix, and TO/FROM
+       flips cleanly at the abeam line. */
+    const d = gpsDev();
+    N.pos += (clamp(d.raw, -10, 10) - N.pos) * Math.min(1, dt * 12);
+    N.vel = 0; N.tf = d.to ? 1 : -1; N.flag = 0; N.valid = 1;
+    N.brg = n360(N.brg + n180(n360(radialOf() + 180) - N.brg) * Math.min(1, dt * 10));
+    return;
+  }
+
+  const cq = coneQ(), q = Math.min(cq, ambQ());
+  const raw = cdi();
+
+  if (S.hsiStyle === 'g5') {
+    /* Digital. The display is a renderer, not a movement: no inertia, no
+       overshoot, no stops to bang against. The receiver is filtered harder, so
+       less raw wander gets through, and once the signal fails validity the bar
+       is simply removed rather than left drifting. */
+    const amp = Math.pow(1 - cq, 1.6) * 4;
+    const tgt = clamp(raw.raw + N.n1 * amp, -10, 10);
+    N.pos += (tgt - N.pos) * Math.min(1, dt * 12);
+    N.vel = 0;
+    N.tf = raw.to ? 1 : -1;                          // discrete, no fading
+    N.flag = 0;
+    N.valid += ((q > 0.42 ? 1 : 0) - N.valid) * Math.min(1, dt * 9);
+    const bt = n360(radialOf() + 180);
+    N.brg = n360(N.brg + n180(bt - N.brg) * Math.min(1, dt * 10));
+    return;
+  }
+
+  /* Steam gauge. A moving-coil pointer with mass and damping. */
+  const amp = Math.pow(1 - cq, 1.4) * 15 + 0.12;
+  const tgt = clamp(raw.raw + N.n1 * amp, -STOP, STOP);
+  const wn = 3.2, z = 0.55, ks = wn * wn, cs = 2 * z * wn;
+  let rem = dt, guard = 0;
+  while (rem > 0 && guard++ < 60) {                  // substep so it stays stable at 16x
+    const h = Math.min(rem, 0.02); rem -= h;
+    N.vel += (ks * (tgt - N.pos) - cs * N.vel) * h;
+    N.pos += N.vel * h;
+    if (N.pos >  STOP) { N.pos =  STOP; N.vel = -N.vel * 0.25; }   // bounce off the stop
+    if (N.pos < -STOP) { N.pos = -STOP; N.vel = -N.vel * 0.25; }
+  }
+  N.valid = 1;
+
+  // TO / FROM sense: collapses toward neither as quality drops
+  const tfTgt = (raw.to ? 1 : -1) * q + N.n2 * (1 - q) * 0.9;
+  N.tf += (tfTgt - N.tf) * Math.min(1, dt * 4);
+
+  // spring-loaded NAV flag, flickering at the fringe
+  const fTgt = clamp((0.70 - q) / 0.40 + N.n3 * (1 - q) * 0.35, 0, 1);
+  N.flag += (fTgt - N.flag) * Math.min(1, dt * 6);
+
+  // bearing pointer: servo lag plus a slew limit, so it cannot snap round instantly
+  const bt = n360(radialOf() + 180 + N.n2 * (1 - cq) * 140);
+  let d = n180(bt - N.brg) * Math.min(1, dt * 5);
+  d = clamp(d, -130 * dt, 130 * dt);
+  N.brg = n360(N.brg + d);
+}
+
+function navInit() {
+  const N = S.nav, r = devNow();
+  N.pos = clamp(r.raw, -STOP, STOP); N.vel = 0;
+  N.tf = r.to ? 1 : -1; N.flag = 0; N.valid = 1; N.brg = n360(radialOf() + 180);
+}
+
+/* CDI: positive deviation = bar displaced right of the course arrow */
+function cdi() {
+  const th = radialOf();
+  const dFrom = n180(th - S.obs);
+  if (Math.abs(dFrom) <= 90) return { to: false, dev: clamp(-dFrom, -10, 10), raw: -dFrom };
+  const dTo = n180(th - S.obs - 180);
+  return { to: true, dev: clamp(dTo, -10, 10), raw: dTo };
+}
+
+/* ============================ entry logic ============================ */
+function recommendedEntry(hdg) {
+  const rel = S.turns === 'right' ? n360(hdg - inbound()) : n360(inbound() - hdg);
+  if (rel > 180 && rel < 290) return 'parallel';
+  if (rel > 110 && rel <= 180) return 'teardrop';
+  return 'direct';
+}
+function entryHow(kind) {
+  const T = S.turns, opp = T === 'right' ? 'left' : 'right';
+  if (kind === 'direct')
+    return `Cross the fix and turn ${T} directly to the outbound heading ${pad3(outbound())}. Start the outbound clock abeam the fix, or at wings level if you never get an abeam.`;
+  if (kind === 'parallel')
+    return `Cross the fix, turn to ${pad3(outbound())} and fly it on the non-holding side for ${S.legNm ? S.legNm + ' NM' : mmss(S.legSec)}. Then turn ${opp} through more than 180&deg; to intercept the inbound course ${pad3(inbound())}, or return direct to the fix.`;
+  return `Cross the fix, turn ${T} to ${pad3(teardropHdg())} — 30&deg; off the outbound course on the holding side — and hold it for ${S.legNm ? S.legNm + ' NM' : mmss(S.legSec)}. Then turn ${T} to intercept the inbound course ${pad3(inbound())}.`;
+}
+
+/* ============================ clearance ============================ */
+function buildClearance() {
+  const dir = compass8(S.radial);
+  const rnav = !!S.legNm;               // mileage legs are an RNAV thing; time is the VOR way
+  const leg = rnav ? `<em>${S.legNm === 10 ? 'ten' : spellNum(S.legNm)} mile legs</em>`
+                   : `<em>${S.legSec === 90 ? 'one and a half minute' : 'one minute'} legs</em>`;
+  const turns = (S.turns === 'right' && S.realPhrase) ? '' : `, <em>${S.turns} turns</em>`;
+  const fixName = S.fixDme
+    ? `the ${S.vor[0]} <em>${spellNum(S.fixDme)} DME fix</em>`
+    : `the ${S.vor[0]} VOR`;
+  $('clearance').innerHTML =
+    `${S.call}, hold <em>${dir}</em> of ${fixName} on the <em>${spellNum(pad3(S.radial))}</em> radial${turns}, ${leg}.`;
+
+  const now = new Date();
+  const efc = new Date(now.getTime() + S.efcMin * 60000);
+  const z = d => String(d.getUTCHours()).padStart(2, '0') + String(d.getUTCMinutes()).padStart(2, '0');
+  const bits = [`${S.vor[1]} VOR`, `inbound course ${pad3(inbound())}`, `outbound heading ${pad3(outbound())}`];
+  if (S.fixDme) bits.push(`fix at ${S.fixDme} DME`);
+  bits.push(rnav ? 'RNAV hold — mileage legs need GPS' : 'timed hold — fly the clock');
+  bits.push(`EFC ${z(efc)}Z`);
+  $('efc').textContent = bits.join('  ·  ');
+}
+
+function newScenario(randomize) {
+  if (randomize) {
+    S.radial = Math.floor(Math.random() * 360);
+    S.turns = Math.random() < 0.5 ? 'right' : 'left';
+    /* Most holds are over the station and timed. A DME fix out on the radial is
+       still a timed hold. Mileage legs only turn up on the RNAV ones. */
+    const roll = Math.random();
+    let pick;
+    if (roll < 0.55)      { S.fixDme = 0;  pick = Math.random() < 0.8 ? 60 : 90; }
+    else if (roll < 0.85) { S.fixDme = 5 + Math.floor(Math.random() * 21); pick = Math.random() < 0.8 ? 60 : 90; }
+    else                  { S.fixDme = Math.random() < 0.5 ? 0 : 8 + Math.floor(Math.random() * 15);
+                            pick = ['d4', 'd5', 'd10'][Math.floor(Math.random() * 3)]; }
+    setLeg(pick);
+    $('setFixDme').value = S.fixDme;
+    S.vor = VORS[Math.floor(Math.random() * VORS.length)];
+    S.call = CALLS[Math.floor(Math.random() * CALLS.length)];
+    S.efcMin = 20 + Math.floor(Math.random() * 25);
+    if (S.randWind) {
+      S.wind.dir = Math.floor(Math.random() * 36) * 10;
+      S.wind.spd = Math.floor(Math.random() * 26);
+      $('setWdir').value = S.wind.dir; $('setWspd').value = S.wind.spd;
+    }
+    $('setRadial').value = S.radial;
+    $('setTurns').value = S.turns;
+    $('setLeg').value = String(pick);
+  }
+  reposition();
+  buildClearance();
+}
+
+function setLeg(v) {
+  if (typeof v === 'string' && v[0] === 'd') { S.legNm = +v.slice(1); S.legSec = 0; }
+  else { S.legSec = +v; S.legNm = 0; }
+}
+
+/* Random start conditions. Position is derived from the arrival heading so the
+   aircraft is always tracking toward the fix. Forcing an entry type picks a
+   heading inside that sector, 4 deg clear of the boundaries. */
+function randomStart() {
+  const inb = inbound(), sgn = S.turns === 'right' ? 1 : -1;
+  const d = S.startMode === 'airway'  ? 14 + Math.random() * 8
+          : S.startMode === 'vectors' ?  6 + Math.random() * 5
+          :                              9 + Math.random() * 7;
+  let hdg;
+  if (S.forceEntry === 'any') hdg = Math.random() * 360;
+  else {
+    const rel = S.forceEntry === 'teardrop' ? 114 + Math.random() * 62
+              : S.forceEntry === 'parallel' ? 184 + Math.random() * 102
+              :                               294 + Math.random() * 172;
+    hdg = n360(inb + sgn * rel);
+  }
+  const brg = n360(hdg + 180);                  // sit upwind of the fix along that heading
+  const F = fixPos();
+  S.ac.x = F.x + d * Math.sin(brg * RAD);
+  S.ac.y = F.y + d * Math.cos(brg * RAD);
+  if (S.forceEntry === 'any')
+    hdg = n360(hdg + (S.startMode === 'vectors' ? Math.random() * 50 - 25 : Math.random() * 8 - 4));
+  S.ac.hdg = hdg;
+}
+
+/* Same clearance, same arrival, clock and trail wiped. Use this to refly an
+   entry you got wrong; reposition() instead rolls a fresh arrival. */
+function restart() {
+  closeEntryPrompt(true);
+  const st = S.startState;
+  if (!st) return reposition();
+  S.ac.x = st.x; S.ac.y = st.y; S.ac.hdg = st.hdg;
+  S.ac.turn = 0; S.turnCmd = 0; S.latch = 0; held.clear();
+  S.obs = st.obs; S.bug = st.bug; S.zoom = st.zoom;
+  S.crumbs = []; S.crossings = []; S.lastCrossT = null; S.elapsed = 0;
+  S.prevDist = null; S.crossCool = 0; S.maxDme = 0;
+  S.call_entry = null; S.answer = null;
+  S.timer.t = 0; S.timer.run = false; S.gyroErr = 0;
+  navInit(); renderVerdict(); renderLaps(); syncEntryBtns();
+}
+
+function reposition() {
+  closeEntryPrompt(true);
+  randomStart();
+  S.ac.turn = 0; S.turnCmd = 0; S.latch = 0;
+  S.obs = inbound(); S.bug = Math.round(S.ac.hdg);
+  S.crumbs = []; S.crossings = []; S.lastCrossT = null; S.elapsed = 0;
+  S.prevDist = null; S.crossCool = 0; S.maxDme = 0;
+  S.call_entry = null; S.answer = null;
+  S.timer.t = 0; S.timer.run = false;
+  S.zoom = clamp(150 / (fixDist() + 3), 6, 60);   // frame the fix and the aircraft
+  S.gyroErr = 0;
+  S.startState = { x: S.ac.x, y: S.ac.y, hdg: S.ac.hdg, obs: S.obs, bug: S.bug, zoom: S.zoom };
+  navInit();
+  renderVerdict(); renderLaps(); syncEntryBtns();
+}
+
+/* ============================ sim loop ============================ */
+let last = performance.now();
+function frame(now) {
+  requestAnimationFrame(frame);            // reschedule first: a bad frame can never stop the clock
+  let dt = (now - last) / 1000; last = now;
+  dt = Math.min(dt, 0.1) * S.rate * (S.ff ? S.ffMult : 1);
+  try {
+    if (!S.paused) step(dt);
+    draw();
+  } catch (err) {
+    if (!S.reported) { S.reported = true; showFatal('Render', err); }
+  }
+}
+
+function step(dt) {
+  // roll in / roll out toward standard rate
+  const target = S.turnCmd * 3;
+  const rollRate = 3.5;
+  if (S.ac.turn < target) S.ac.turn = Math.min(target, S.ac.turn + rollRate * dt);
+  else S.ac.turn = Math.max(target, S.ac.turn - rollRate * dt);
+
+  const turningNow = Math.abs(S.ac.turn) > 0.15;
+  S.ac.hdg = n360(S.ac.hdg + S.ac.turn * dt);
+
+  const g = gsVec();
+  S.ac.x += g.x * dt; S.ac.y += g.y * dt;
+
+  if (S.hsiStyle === 'mech' && S.gyroDrift) S.gyroErr += S.gyroDrift / 3600 * dt;
+  updNav(dt);
+  if (S.timer.run) S.timer.t += dt;
+  S.elapsed += dt;
+  if (S.crossCool > 0) S.crossCool -= dt;
+
+  // breadcrumbs
+  S.crumbAcc += dt;
+  if (S.crumbAcc > 1.5) {
+    S.crumbAcc = 0;
+    S.crumbs.push({ x: S.ac.x, y: S.ac.y });
+    if (S.crumbs.length > 3000) S.crumbs.shift();
+  }
+
+  // auto timer: restart when rolling wings level
+  if (S.autoTimer && S.wasTurning && !turningNow) { S.timer.t = 0; S.timer.run = true; }
+  S.wasTurning = turningNow;
+
+  // fix crossing detection
+  const d = fixDist();
+  S.maxDme = Math.max(S.maxDme, d);
+  if (S.prevDist !== null && d < 1.5 && d > S.prevDist && S.crossCool <= 0) onCross();
+  S.prevDist = d;
+}
+
+function onCross() {
+  S.crossCool = 25;
+  const hdg = S.ac.hdg;
+  if (!S.answer) {
+    S.answer = { rec: recommendedEntry(hdg), hdg, rel: S.turns === 'right' ? n360(hdg - inbound()) : n360(inbound() - hdg) };
+    if (S.call_entry) renderVerdict();
+    else openEntryPrompt();          // no call: freeze here and make them commit
+  }
+  const lap = S.lastCrossT === null ? null : S.elapsed - S.lastCrossT;
+  S.lastCrossT = S.elapsed;
+  const rgt = { x: Math.sin((inbound() + 90) * RAD), y: Math.cos((inbound() + 90) * RAD) };
+  const Fx = fixPos();
+  const miss = (S.prevDist === null ? 0 : S.prevDist) *
+               Math.sign((S.ac.x - Fx.x) * rgt.x + (S.ac.y - Fx.y) * rgt.y || 1);
+  S.crossings.push({ n: S.crossings.length + 1, lap, hdg, err: miss, max: S.maxDme });
+  S.maxDme = 0;
+  if (S.autoTimer) { S.timer.t = 0; S.timer.run = true; }
+  renderLaps();
+}
+
+/* ============================ map drawing ============================ */
+const mapCv = $('map'), mctx = mapCv.getContext('2d');
+const hsiCv = $('hsi'), hctx = hsiCv.getContext('2d');
+const dgCv  = $('dg'),  dctx = dgCv.getContext('2d');
+const secCv = $('sector'), sctx = secCv.getContext('2d');
+
+function fit(cv, ctx) {
+  const r = cv.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  const w = Math.max(1, Math.round(r.width)), h = Math.max(1, Math.round(r.height));
+  if (cv.width !== w * dpr || cv.height !== h * dpr) { cv.width = w * dpr; cv.height = h * dpr; }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { w, h, ok: r.width > 12 && r.height > 12 };   // hidden panels measure zero
+}
+
+function idealPattern() {
+  const inb = inbound() * RAD;
+  const u = { x: Math.sin(inb), y: Math.cos(inb) };            // direction of travel inbound
+  const sgn = holdSideSign();
+  const p = { x: Math.sin(inb + sgn * 90 * RAD), y: Math.cos(inb + sgn * 90 * RAD) };  // toward holding side
+  const r = turnRadius();
+  const L = S.legNm ? S.legNm : (S.ac.tas / 3600) * S.legSec;
+  const F = fixPos();
+  const A = { x: F.x - u.x * L, y: F.y - u.y * L };              // start of inbound leg
+  const B = { x: F.x + 2 * r * p.x, y: F.y + 2 * r * p.y };      // end of first turn
+  const C = { x: B.x - u.x * L, y: B.y - u.y * L };             // end of outbound leg
+  const pts = [A, F];
+  const arc = (cx, cy, from, to) => {
+    const n = 40;
+    for (let i = 1; i <= n; i++) {
+      const a = from + (to - from) * i / n;
+      pts.push({ x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) });
+    }
+  };
+  // first turn: centre F + r*p, from F to B
+  let c1 = { x: F.x + r * p.x, y: F.y + r * p.y };
+  let a0 = Math.atan2(F.y - c1.y, F.x - c1.x);
+  let sweep = sgn > 0 ? -Math.PI : Math.PI;
+  arc(c1.x, c1.y, a0, a0 + sweep);
+  pts.push(C);
+  let c2 = { x: A.x + r * p.x, y: A.y + r * p.y };
+  let b0 = Math.atan2(C.y - c2.y, C.x - c2.x);
+  arc(c2.x, c2.y, b0, b0 + sweep);
+  pts.push(A);
+  return pts;
+}
+
+function drawMap() {
+  if (mapCv.offsetParent === null) return;   // map hidden or rail collapsed
+  const f = fit(mapCv, mctx); if (!f.ok) return;
+  const { w, h } = f;
+  mctx.clearRect(0, 0, w, h);
+  mctx.fillStyle = '#000'; mctx.fillRect(0, 0, w, h);
+
+  const ppn = S.zoom;
+  const FX = fixPos();
+  const ox = S.show.follow ? S.ac.x : FX.x, oy = S.show.follow ? S.ac.y : FX.y;
+  const cx = w / 2, cy = h / 2;
+  const X = p => cx + (p.x - ox) * ppn, Y = p => cy - (p.y - oy) * ppn;
+  const far = Math.max(w, h) / ppn;
+
+  mctx.lineCap = 'round'; mctx.lineJoin = 'round';
+
+  if (S.show.rings) {
+    mctx.strokeStyle = '#1e1e1e'; mctx.lineWidth = 1;
+    for (let r = 5; r <= 40; r += 5) {
+      mctx.beginPath(); mctx.arc(X({x:0}), Y({y:0}), r * ppn, 0, Math.PI * 2); mctx.stroke();
+    }
+  }
+  if (S.show.rose) {
+    mctx.strokeStyle = '#242424'; mctx.lineWidth = 1;
+    for (let b = 0; b < 360; b += 10) {
+      const i = b % 30 === 0 ? 3.6 : 4.2;
+      mctx.beginPath();
+      mctx.moveTo(X({x: 4.6*Math.sin(b*RAD)}), Y({y: 4.6*Math.cos(b*RAD)}));
+      mctx.lineTo(X({x: i*Math.sin(b*RAD)}),  Y({y: i*Math.cos(b*RAD)}));
+      mctx.stroke();
+    }
+    mctx.beginPath(); mctx.arc(X({x:0}), Y({y:0}), 4.6 * ppn, 0, Math.PI*2); mctx.stroke();
+  }
+
+  if (S.show.course) {
+    // assigned radial, outbound from the VOR
+    const rr = S.radial * RAD;
+    mctx.strokeStyle = '#ffffff'; mctx.lineWidth = 1.4; mctx.setLineDash([]);
+    mctx.beginPath();
+    mctx.moveTo(X({x:0}), Y({y:0}));
+    mctx.lineTo(X({x: far*Math.sin(rr)}), Y({y: far*Math.cos(rr)}));
+    mctx.stroke();
+    // reciprocal (the inbound course), dashed
+    mctx.setLineDash([7, 7]); mctx.strokeStyle = '#8a8a8a';
+    mctx.beginPath();
+    mctx.moveTo(X({x:0}), Y({y:0}));
+    mctx.lineTo(X({x:-far*Math.sin(rr)}), Y({y:-far*Math.cos(rr)}));
+    mctx.stroke(); mctx.setLineDash([]);
+    // label on the radial
+    const lx = 6*Math.sin(rr), ly = 6*Math.cos(rr);
+    mctx.fillStyle = '#ffffff'; mctx.font = '11px ui-monospace,monospace';
+    mctx.textAlign = 'center'; mctx.textBaseline = 'middle';
+    mctx.fillText('R-' + pad3(S.radial), X({x:lx}), Y({y:ly}) - 10);
+  }
+
+  if (S.show.ideal) {
+    const pts = idealPattern();
+    mctx.strokeStyle = '#3d3d3d'; mctx.lineWidth = 1.2; mctx.setLineDash([4, 5]);
+    mctx.beginPath();
+    pts.forEach((p, i) => i ? mctx.lineTo(X(p), Y(p)) : mctx.moveTo(X(p), Y(p)));
+    mctx.stroke(); mctx.setLineDash([]);
+  }
+
+  if (S.show.crumbs) {
+    mctx.fillStyle = '#8f8f8f';
+    for (const c of S.crumbs) {
+      const px = X(c), py = Y(c);
+      if (px < -20 || px > w + 20 || py < -20 || py > h + 20) continue;
+      mctx.fillRect(px - 1, py - 1, 2, 2);
+    }
+  }
+
+  if (S.show.fix) {
+    const px = X({x:0}), py = Y({y:0});
+    mctx.strokeStyle = '#ffffff'; mctx.lineWidth = 1.6;
+    mctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = (i * 60 - 30) * RAD, R = 9;
+      const qx = px + R * Math.cos(a), qy = py + R * Math.sin(a);
+      i ? mctx.lineTo(qx, qy) : mctx.moveTo(qx, qy);
+    }
+    mctx.closePath(); mctx.stroke();
+    mctx.fillStyle = '#ffffff';
+    mctx.beginPath(); mctx.arc(px, py, 2.2, 0, Math.PI*2); mctx.fill();
+    mctx.font = '11px ui-monospace,monospace'; mctx.textAlign = 'left'; mctx.textBaseline = 'top';
+    mctx.fillText(S.vor[0], px + 13, py + 5);
+
+    if (S.fixDme) {                       // holding fix out on the radial
+      const fx = X(FX), fy = Y(FX);
+      mctx.strokeStyle = '#ffffff'; mctx.lineWidth = 1.6;
+      mctx.beginPath();
+      mctx.moveTo(fx, fy - 9); mctx.lineTo(fx + 8, fy + 6); mctx.lineTo(fx - 8, fy + 6);
+      mctx.closePath(); mctx.stroke();
+      mctx.fillStyle = '#ffffff';
+      mctx.textAlign = 'left'; mctx.textBaseline = 'top';
+      mctx.fillText('D' + Math.round(S.fixDme), fx + 12, fy + 2);
+    }
+  }
+
+  if (S.show.plane) {
+    const px = X(S.ac), py = Y(S.ac);
+    mctx.save(); mctx.translate(px, py); mctx.rotate(S.ac.hdg * RAD);
+    mctx.strokeStyle = '#ffffff'; mctx.fillStyle = '#ffffff'; mctx.lineWidth = 1.6;
+    mctx.beginPath();
+    mctx.moveTo(0, -11); mctx.lineTo(0, 9);          // fuselage
+    mctx.moveTo(-9, 0);  mctx.lineTo(9, 0);          // wing
+    mctx.moveTo(-4, 7);  mctx.lineTo(4, 7);          // stabiliser
+    mctx.stroke();
+    mctx.beginPath(); mctx.arc(0, -11, 1.8, 0, Math.PI*2); mctx.fill();
+    mctx.restore();
+    // ground track vector
+    const g = gsVec(), sc = 90;
+    mctx.strokeStyle = '#555'; mctx.lineWidth = 1;
+    mctx.beginPath(); mctx.moveTo(px, py); mctx.lineTo(px + g.x*sc*ppn, py - g.y*sc*ppn); mctx.stroke();
+  }
+
+  // wind arrow, corner
+  if (S.wind.spd > 0) {
+    mctx.save(); mctx.translate(w - 46, 46); mctx.rotate(S.wind.dir * RAD);
+    mctx.strokeStyle = '#6a6a6a'; mctx.lineWidth = 1.4;
+    mctx.beginPath(); mctx.moveTo(0, -16); mctx.lineTo(0, 16);
+    mctx.moveTo(-5, 10); mctx.lineTo(0, 16); mctx.lineTo(5, 10); mctx.stroke();
+    mctx.restore();
+    mctx.fillStyle = '#6a6a6a'; mctx.font = '10px ui-monospace,monospace';
+    mctx.textAlign = 'center'; mctx.textBaseline = 'top';
+    mctx.fillText(pad3(S.wind.dir) + '/' + S.wind.spd, w - 46, 66);
+  }
+
+  const g = gsVec(), gs = Math.hypot(g.x, g.y) * 3600;
+  $('coneTxt').textContent = `\u2248 ${coneR().toFixed(2)} NM radius, station at ${90 - S.coneAng}\u00b0 elevation, about ${Math.round(2 * coneR() / (gs || 1) * 3600)} s to cross`;
+  const side = (S.ac.x * Math.sin((inbound() + 90) * RAD) + S.ac.y * Math.cos((inbound() + 90) * RAD)) * holdSideSign();
+  $('mapText').innerHTML =
+    `${pad3(S.ac.hdg)}&deg; HDG &nbsp; ${Math.round(gs)} KT GS<br>` +
+    `R-${pad3(radialOf())} &nbsp; ${dme().toFixed(1)} DME<br>` +
+    (S.fixDme ? `${fixDist().toFixed(1)} NM to fix<br>` : '') +
+    `<span style="color:${side >= 0 ? '#7f8f9a' : '#c08a3a'}">${side >= 0 ? 'holding side' : 'non-holding side'}</span>` +
+    (S.paused ? '<br><span style="color:#e2564f">PAUSED</span>'
+     : S.ff ? '<br><span style="color:#46c98b">FAST FWD ' + S.ffMult + '&times;</span>' : '');
+}
+
+/* ============================ HSI ============================ */
+const MONO = 'ui-monospace,"SF Mono",Menlo,Consolas,monospace';
+const COND = '"Roboto Condensed","Arial Narrow",system-ui,sans-serif';
+const GRN = '#35c757', MAG = '#e15be8', CYN = '#22c8e8', AMB = '#f0c243';
+
+/* ---------------- shared instrument sprites ---------------- */
+function roundRect(c, x, y, w, h, r) {
+  c.beginPath(); c.moveTo(x + r, y);
+  c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
+}
+function screw(c, x, y, r) {
+  c.save(); c.translate(x, y);
+  const g = c.createLinearGradient(-r, -r, r, r);
+  g.addColorStop(0, '#4a5057'); g.addColorStop(1, '#22262a');
+  c.fillStyle = g; c.beginPath(); c.arc(0, 0, r, 0, Math.PI * 2); c.fill();
+  c.strokeStyle = '#16191c'; c.lineWidth = 1; c.stroke();
+  c.strokeStyle = '#14171a'; c.lineWidth = Math.max(1, r * 0.34);
+  c.beginPath(); c.moveTo(-r * 0.62, 0); c.lineTo(r * 0.62, 0); c.stroke();
+  c.restore();
+}
+function knob(c, x, y, r, label) {
+  c.save(); c.translate(x, y);
+  const g = c.createLinearGradient(0, -r, 0, r);
+  g.addColorStop(0, '#31363b'); g.addColorStop(1, '#171a1d');
+  c.fillStyle = g; c.beginPath(); c.arc(0, 0, r, 0, Math.PI * 2); c.fill();
+  c.strokeStyle = '#0d0f11'; c.lineWidth = 1.5; c.stroke();
+  c.strokeStyle = '#454b52'; c.lineWidth = 1;
+  for (let i = 0; i < 18; i++) {
+    const a = i * 20 * RAD;
+    c.beginPath();
+    c.moveTo(Math.cos(a) * r * 0.74, Math.sin(a) * r * 0.74);
+    c.lineTo(Math.cos(a) * r * 0.99, Math.sin(a) * r * 0.99); c.stroke();
+  }
+  c.fillStyle = '#1b1e21'; c.beginPath(); c.arc(0, 0, r * 0.58, 0, Math.PI * 2); c.fill();
+  c.fillStyle = '#9aa3ab'; c.font = `600 ${r * 0.58}px ${COND}`;
+  c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(label, 0, 0);
+  c.restore();
+}
+/* G5 rotary encoder: knurled outer ring with an index mark, pushable centre */
+function encoderKnob(c, x, y, r, ang) {
+  c.save(); c.translate(x, y);
+  const g = c.createRadialGradient(-r * 0.3, -r * 0.4, r * 0.08, 0, 0, r);
+  g.addColorStop(0, '#3f464d'); g.addColorStop(1, '#14171a');
+  c.fillStyle = g; c.beginPath(); c.arc(0, 0, r, 0, Math.PI * 2); c.fill();
+  c.strokeStyle = '#08090a'; c.lineWidth = 1.5; c.stroke();
+  c.save(); c.rotate(ang * RAD);
+  c.strokeStyle = '#525b64'; c.lineWidth = Math.max(1, r * 0.075);
+  for (let i = 0; i < 24; i++) {
+    const a = i * 15 * RAD;
+    c.beginPath();
+    c.moveTo(Math.cos(a) * r * 0.80, Math.sin(a) * r * 0.80);
+    c.lineTo(Math.cos(a) * r * 0.995, Math.sin(a) * r * 0.995); c.stroke();
+  }
+  c.fillStyle = '#dfe6ee';
+  c.beginPath(); c.rect(-r * 0.075, -r * 0.80, r * 0.15, r * 0.34); c.fill();
+  c.restore();
+  const g2 = c.createRadialGradient(-r * 0.2, -r * 0.25, r * 0.05, 0, 0, r * 0.58);
+  g2.addColorStop(0, '#333a41'); g2.addColorStop(1, '#0f1214');
+  c.fillStyle = g2; c.beginPath(); c.arc(0, 0, r * 0.58, 0, Math.PI * 2); c.fill();
+  c.strokeStyle = '#08090a'; c.lineWidth = 1; c.stroke();
+  c.restore();
+}
+
+/* black crinkle-finish case with corner screws */
+function caseAndFace(c, S0, faceR) {
+  const R = S0 / 2;
+  const g = c.createLinearGradient(-R, -R, R, R);
+  g.addColorStop(0, '#1d2023'); g.addColorStop(0.5, '#131517'); g.addColorStop(1, '#0b0d0e');
+  c.fillStyle = g; roundRect(c, -R + 1, -R + 1, S0 - 2, S0 - 2, S0 * 0.07); c.fill();
+  c.strokeStyle = '#08090a'; c.lineWidth = 1.5; c.stroke();
+  const k = R * 0.845, sr = S0 * 0.026;
+  for (const [sx, sy] of [[-k, -k], [k, -k], [-k, k], [k, k]]) screw(c, sx, sy, sr);
+  c.fillStyle = '#050607';
+  c.beginPath(); c.arc(0, 0, faceR + S0 * 0.014, 0, Math.PI * 2); c.fill();
+  c.strokeStyle = '#2a2e33'; c.lineWidth = 1.2; c.stroke();
+  c.fillStyle = '#0a0b0c'; c.beginPath(); c.arc(0, 0, faceR, 0, Math.PI * 2); c.fill();
+}
+/* rotating compass card. rot = value shown at the top index */
+function compassCard(c, F, rot, letters, tickCol, txtCol, fontScale) {
+  c.save(); c.rotate(-rot * RAD);
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  for (let b = 0; b < 360; b += 5) {
+    const big = b % 10 === 0, lbl = b % 30 === 0, a = b * RAD;
+    c.strokeStyle = tickCol; c.lineWidth = big ? 2 : 1.2;
+    const r1 = F * 0.985, r2 = F * (big ? 0.875 : 0.925);
+    c.beginPath();
+    c.moveTo(r1 * Math.sin(a), -r1 * Math.cos(a));
+    c.lineTo(r2 * Math.sin(a), -r2 * Math.cos(a)); c.stroke();
+    if (lbl) {
+      const rr = F * 0.765;
+      c.save(); c.translate(rr * Math.sin(a), -rr * Math.cos(a)); c.rotate(a);
+      c.fillStyle = txtCol; c.font = `700 ${F * fontScale}px ${COND}`;
+      c.fillText(letters && b % 90 === 0 ? ['N', 'E', 'S', 'W'][b / 90] : String(b / 10), 0, 0);
+      c.restore();
+    }
+  }
+  c.restore();
+}
+
+/* ---------------- steam gauge CDI head ---------------- */
+function drawCDIHead() {
+  const f = fit(hsiCv, hctx); if (!f.ok) return;
+  const { w, h } = f, c = hctx, N = S.nav;
+  c.clearRect(0, 0, w, h);
+  const S0 = Math.min(w, h), F = S0 * 0.385;
+  c.save(); c.translate(w / 2, h / 2);
+  caseAndFace(c, S0, F);
+
+  // the card is driven by the OBS knob, so the selected course sits at the top
+  compassCard(c, F, S.obs, false, '#e8e6df', '#f2f0e8', 0.155);
+
+  // top index
+  c.fillStyle = AMB;
+  c.beginPath(); c.moveTo(0, -F * 0.905); c.lineTo(-F * 0.07, -F * 1.0); c.lineTo(F * 0.07, -F * 1.0);
+  c.closePath(); c.fill();
+
+  const usable = F * 0.60, perDot = usable / 5.5, pxDeg = perDot / 2;   // 2 deg per dot
+
+  // deviation dots
+  c.fillStyle = '#d8d6cf';
+  for (let i = 1; i <= 5; i++) for (const sg of [-1, 1]) {
+    c.beginPath(); c.arc(sg * i * perDot, 0, F * 0.021, 0, Math.PI * 2); c.fill();
+  }
+  // glideslope pointer, parked and flagged with a VOR tuned
+  c.strokeStyle = '#565a5e'; c.lineWidth = F * 0.032;
+  c.beginPath(); c.moveTo(-usable * 1.06, 0); c.lineTo(usable * 1.06, 0); c.stroke();
+
+  // lateral needle
+  const nx = clamp(N.pos, -STOP, STOP) * pxDeg;
+  c.strokeStyle = '#f4f2ea'; c.lineWidth = F * 0.036; c.lineCap = 'butt';
+  c.beginPath(); c.moveTo(nx, -F * 0.70); c.lineTo(nx, F * 0.70); c.stroke();
+
+  // centre donut
+  c.strokeStyle = '#f4f2ea'; c.lineWidth = F * 0.03;
+  c.beginPath(); c.arc(0, 0, F * 0.085, 0, Math.PI * 2); c.stroke();
+
+  // TO / FROM triangles
+  const tri = (al, up) => {
+    if (al < 0.02) return;
+    c.save(); c.globalAlpha = al; c.fillStyle = AMB;
+    const y = up ? -F * 0.50 : F * 0.50, sg = up ? 1 : -1, sz = F * 0.10;
+    c.beginPath();
+    c.moveTo(0, y - sz * sg); c.lineTo(-sz * 0.85, y + sz * 0.55 * sg); c.lineTo(sz * 0.85, y + sz * 0.55 * sg);
+    c.closePath(); c.fill(); c.restore();
+  };
+  tri(clamp((N.tf - 0.18) / 0.35, 0, 1), true);
+  tri(clamp((-N.tf - 0.18) / 0.35, 0, 1), false);
+
+  // NAV / VLOC annunciator window, upper left
+  c.save();
+  c.translate(-F * 0.46, -F * 0.42);
+  c.fillStyle = '#111315'; roundRect(c, -F * 0.20, -F * 0.115, F * 0.40, F * 0.23, F * 0.02); c.fill();
+  c.strokeStyle = '#2a2e32'; c.lineWidth = 1; c.stroke();
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  if (N.flag > 0.02) {                     // red flag pulled in by its spring
+    const t = clamp(N.flag, 0, 1);
+    c.save(); c.globalAlpha = clamp(t * 1.5, 0, 1);
+    c.translate(0, (1 - t) * -F * 0.26); c.rotate((1 - t) * 0.4);
+    c.fillStyle = '#b8352b'; roundRect(c, -F * 0.19, -F * 0.105, F * 0.38, F * 0.21, F * 0.015); c.fill();
+    c.fillStyle = '#ffeceb'; c.font = `700 ${F * 0.125}px ${COND}`; c.fillText('NAV', 0, F * 0.006);
+    c.restore();
+  } else {
+    c.fillStyle = '#6f767c'; c.font = `600 ${F * 0.10}px ${COND}`; c.fillText('VLOC', 0, F * 0.006);
+  }
+  c.restore();
+
+  // GS flag, right side, always in view on a VOR
+  c.save();
+  c.translate(F * 0.72, -F * 0.10);
+  c.fillStyle = '#b8352b'; roundRect(c, -F * 0.055, -F * 0.20, F * 0.11, F * 0.40, F * 0.012); c.fill();
+  c.fillStyle = '#ffeceb'; c.font = `700 ${F * 0.085}px ${COND}`;
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.save(); c.rotate(Math.PI / 2); c.fillText('GS', 0, 0); c.restore();
+  c.restore();
+
+  c.fillStyle = '#8d949a'; c.font = `600 ${F * 0.085}px ${COND}`;
+  c.textAlign = 'right'; c.textBaseline = 'middle';
+  c.fillText('VOR / LOC', F * 0.74, F * 0.60);
+
+  knob(c, -S0 * 0.385, S0 * 0.385, S0 * 0.062, 'OBS');
+  S.hitObs = { x: w / 2 - S0 * 0.385, y: h / 2 + S0 * 0.385, r: S0 * 0.062 };
+  S.hitG5 = null;
+  c.restore();
+}
+
+/* ---------------- directional gyro, flown alongside the CDI head ---------------- */
+function drawDG() {
+  const f = fit(dgCv, dctx); if (!f.ok) return;
+  const { w, h } = f, c = dctx;
+  c.clearRect(0, 0, w, h);
+  const S0 = Math.min(w, h), F = S0 * 0.385;
+  c.save(); c.translate(w / 2, h / 2);
+  caseAndFace(c, S0, F);
+  compassCard(c, F, dgHdg(), true, '#e8e6df', '#f2f0e8', 0.165);
+
+  // heading bug rides the card
+  c.save(); c.rotate((S.bug - dgHdg()) * RAD);
+  c.fillStyle = CYN;
+  c.beginPath();
+  c.moveTo(-F * 0.085, -F * 0.985); c.lineTo(F * 0.085, -F * 0.985);
+  c.lineTo(F * 0.05, -F * 0.855); c.lineTo(-F * 0.05, -F * 0.855);
+  c.closePath(); c.fill();
+  c.restore();
+
+  // fixed lubber line and aircraft symbol
+  c.fillStyle = '#f2f0e8';
+  c.beginPath(); c.moveTo(0, -F * 1.0); c.lineTo(-F * 0.075, -F * 0.885); c.lineTo(F * 0.075, -F * 0.885);
+  c.closePath(); c.fill();
+  c.strokeStyle = '#f2f0e8'; c.lineWidth = F * 0.045; c.lineCap = 'round';
+  c.beginPath();
+  c.moveTo(0, -F * 0.30); c.lineTo(0, F * 0.30);
+  c.moveTo(-F * 0.34, -F * 0.02); c.lineTo(F * 0.34, -F * 0.02);
+  c.moveTo(-F * 0.14, F * 0.24); c.lineTo(F * 0.14, F * 0.24);
+  c.stroke(); c.lineCap = 'butt';
+
+  c.fillStyle = '#8d949a'; c.font = `600 ${F * 0.085}px ${COND}`;
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText('DIRECTIONAL GYRO', 0, F * 0.62);
+
+  knob(c, -S0 * 0.385, S0 * 0.385, S0 * 0.062, 'HDG');
+  S.hitHdg = { x: w / 2 - S0 * 0.385, y: h / 2 + S0 * 0.385, r: S0 * 0.062 };
+  c.restore();
+}
+
+/* ---------------- Garmin G5 style HSI ---------------- */
+function drawG5() {
+  const f = fit(hsiCv, hctx); if (!f.ok) return;
+  const { w, h } = f, c = hctx, N = S.nav;
+  c.clearRect(0, 0, w, h);
+  const S0 = Math.min(w, h), B = S0 / 2;
+  const gps = S.navSrc === 'gps', SRC = gps ? MAG : GRN;
+
+  // ---- case, LCD and the encoder on the bezel ----
+  c.save(); c.translate(w / 2, h / 2);
+  const cg = c.createLinearGradient(-B, -B, B, B);
+  cg.addColorStop(0, '#2b3036'); cg.addColorStop(0.5, '#1b1f23'); cg.addColorStop(1, '#101315');
+  c.fillStyle = cg; roundRect(c, -B + 1, -B + 1, S0 - 2, S0 - 2, S0 * 0.05); c.fill();
+  c.strokeStyle = '#08090a'; c.lineWidth = 1.5; c.stroke();
+  c.fillStyle = '#000';
+  roundRect(c, -S0 * 0.465, -S0 * 0.465, S0 * 0.93, S0 * 0.80, S0 * 0.018); c.fill();
+  c.strokeStyle = '#0e1114'; c.lineWidth = 1; c.stroke();
+  c.fillStyle = '#79828a'; c.font = `600 ${S0 * 0.048}px ${COND}`;
+  c.textAlign = 'left'; c.textBaseline = 'middle';
+  c.fillText('GARMIN  G5', -S0 * 0.43, S0 * 0.415);
+  const kx = S0 * 0.335, ky = S0 * 0.415, kr = S0 * 0.068;
+  encoderKnob(c, kx, ky, kr, S.knobAngle);
+  c.restore();
+  S.hitG5 = { x: w / 2 + kx, y: h / 2 + ky, r: kr };
+
+  // ---- the display itself ----
+  const R = S0 * 0.392, sc = R / 165;
+  const fs = n => `${Math.max(8, n * sc)}px`;
+  c.save(); c.translate(w / 2, h / 2 - S0 * 0.065);
+
+  c.save(); c.rotate(-S.ac.hdg * RAD);
+  c.strokeStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle';
+  for (let b = 0; b < 360; b += 5) {
+    const big = b % 10 === 0, lbl = b % 30 === 0, a = b * RAD;
+    c.lineWidth = big ? 2 : 1;
+    const r1 = R - 4, r2 = R - (big ? 14 : 9);
+    c.beginPath();
+    c.moveTo(r1 * Math.sin(a), -r1 * Math.cos(a));
+    c.lineTo(r2 * Math.sin(a), -r2 * Math.cos(a)); c.stroke();
+    if (lbl) {
+      const rr = R - 27;
+      c.save(); c.translate(rr * Math.sin(a), -rr * Math.cos(a)); c.rotate(a);
+      c.fillStyle = '#fff'; c.font = `700 ${fs(15)} ${COND}`;
+      c.fillText(b === 0 ? 'N' : b === 90 ? 'E' : b === 180 ? 'S' : b === 270 ? 'W' : String(b / 10), 0, 0);
+      c.restore();
+    }
+  }
+
+  c.save(); c.rotate(S.bug * RAD);
+  c.strokeStyle = CYN; c.lineWidth = 2.6;
+  c.beginPath();
+  c.moveTo(-9, -R + 2); c.lineTo(-9, -R + 13); c.lineTo(-4, -R + 13);
+  c.moveTo( 9, -R + 2); c.lineTo( 9, -R + 13); c.lineTo( 4, -R + 13);
+  c.stroke(); c.restore();
+
+  const showDev = N.valid > 0.5;
+  c.save(); c.rotate(S.obs * RAD);
+  const cr = R - 34, gap = cr * 0.42;
+  c.strokeStyle = SRC; c.fillStyle = SRC; c.lineWidth = 4;
+  c.beginPath(); c.moveTo(0, -cr); c.lineTo(0, -gap); c.stroke();
+  c.beginPath(); c.moveTo(0, -cr - 12); c.lineTo(-11, -cr + 4); c.lineTo(11, -cr + 4);
+  c.closePath(); c.fill();
+  c.beginPath(); c.moveTo(0, gap); c.lineTo(0, cr); c.stroke();
+
+  const perDot = gap / 2.9, pxDeg = perDot / 5;
+  c.fillStyle = '#fff';
+  for (let i = 1; i <= 2; i++) for (const sg of [-1, 1]) {
+    c.beginPath(); c.arc(sg * i * perDot, 0, 3.4, 0, Math.PI * 2); c.fill();
+  }
+  if (showDev) {
+    const nx = N.pos * pxDeg;
+    c.fillStyle = SRC;
+    c.beginPath(); c.rect(nx - 2.5, -gap + 2, 5, (gap - 2) * 2); c.fill();
+    const y = N.tf > 0 ? -gap * 0.62 : gap * 0.62, sg = N.tf > 0 ? 1 : -1;
+    c.beginPath();
+    c.moveTo(0, y - 8 * sg); c.lineTo(-7, y + 3 * sg); c.lineTo(7, y + 3 * sg);
+    c.closePath(); c.fill();
+  }
+  c.restore();
+
+  if (showDev) {
+    c.save(); c.rotate(N.brg * RAD);
+    c.strokeStyle = CYN; c.fillStyle = CYN; c.lineWidth = 2;
+    c.beginPath(); c.moveTo(0, -R + 16); c.lineTo(0, -R + 30); c.stroke();
+    c.beginPath(); c.moveTo(0, -R + 12); c.lineTo(-5, -R + 22); c.lineTo(5, -R + 22);
+    c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(0, R - 16); c.lineTo(0, R - 30); c.stroke();
+    c.restore();
+  }
+  c.restore();                                   // end card rotation
+
+  c.fillStyle = '#fff';
+  c.beginPath(); c.moveTo(0, -R + 2); c.lineTo(-7, -R + 15); c.lineTo(7, -R + 15);
+  c.closePath(); c.fill();
+
+  c.beginPath();                                 // aircraft glyph
+  c.moveTo(0, -15); c.lineTo(2.5, -6); c.lineTo(15, 2); c.lineTo(15, 5.5);
+  c.lineTo(2.5, 2.5); c.lineTo(2.5, 10); c.lineTo(7, 13.5); c.lineTo(7, 15.5);
+  c.lineTo(0, 13.5); c.lineTo(-7, 15.5); c.lineTo(-7, 13.5); c.lineTo(-2.5, 10);
+  c.lineTo(-2.5, 2.5); c.lineTo(-15, 5.5); c.lineTo(-15, 2); c.lineTo(-2.5, -6);
+  c.closePath(); c.fill();
+
+  // readouts, kept inside the rose
+  c.textBaseline = 'middle';
+  const bw = R * 0.21, bh = R * 0.14;
+  c.fillStyle = '#000'; c.strokeStyle = '#8a949c'; c.lineWidth = 1.4;
+  roundRect(c, -bw, -R + 2, bw * 2, bh, 2); c.fill(); c.stroke();
+  c.fillStyle = '#fff'; c.font = `700 ${fs(17)} ${COND}`;
+  c.textAlign = 'center'; c.fillText(pad3(S.ac.hdg), 0, -R + 2 + bh / 2);
+
+  c.font = `600 ${fs(12)} ${COND}`;
+  const field = (txt, col, x, align, active) => {
+    c.textAlign = align;
+    const wd = c.measureText(txt).width, hgt = R * 0.115;
+    if (active) {
+      const bx = align === 'left' ? x - R * 0.03 : x - wd - R * 0.03;
+      c.fillStyle = col; roundRect(c, bx, -R * 0.48 - hgt / 2, wd + R * 0.06, hgt, 2); c.fill();
+      c.fillStyle = '#000';
+    } else c.fillStyle = col;
+    c.fillText(txt, x, -R * 0.48);
+  };
+  field('HDG ' + pad3(S.bug), CYN, -R * 0.55, 'left',  S.g5Field === 'hdg');
+  field('CRS ' + pad3(S.obs), SRC,  R * 0.55, 'right', S.g5Field === 'crs');
+  c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = SRC;
+  c.fillText(gps ? `GPS  ${S.gpsScale.toFixed(S.gpsScale < 1 ? 2 : 1)} NM` : 'VOR1', 0, R * 0.72);
+
+  if (!showDev) {
+    c.fillStyle = '#151206'; c.strokeStyle = AMB; c.lineWidth = 1.6;
+    roundRect(c, -R * 0.17, -R * 0.30 - R * 0.09, R * 0.34, R * 0.18, 2); c.fill(); c.stroke();
+    c.fillStyle = AMB; c.font = `700 ${fs(14)} ${COND}`;
+    c.fillText('NAV', 0, -R * 0.30);
+  }
+  c.restore();
+}
+
+/* ---------------- dispatcher ---------------- */
+function layoutInstruments() {
+  const box = $('hsiBox').getBoundingClientRect();
+  const mech = S.hsiStyle === 'mech', gapPx = 16;
+  let main;
+  if (mech) {
+    main = Math.max(80, Math.min(box.height, (box.width - gapPx) / 1.72));
+    const d = main * 0.72;
+    dgCv.style.display = 'block';
+    dgCv.style.width = dgCv.style.height = Math.round(d) + 'px';
+  } else {
+    main = Math.max(80, Math.min(box.height, box.width));
+    dgCv.style.display = 'none';
+  }
+  hsiCv.style.width = hsiCv.style.height = Math.round(main) + 'px';
+}
+function drawHSI() {
+  layoutInstruments();
+  if (S.hsiStyle === 'g5') drawG5();
+  else { drawCDIHead(); drawDG(); }
+}
+
+/* ============================ entry sector diagram ============================ */
+function drawSector() {
+  if (!S.cheat && !S.answer) { $('sectorWrap').style.display = 'none'; return; }
+  $('sectorWrap').style.display = 'flex';
+  const f = fit(secCv, sctx);
+  if (!f.ok) return;                       // panel collapsed, nothing to draw into
+  const { w, h } = f;
+  sctx.clearRect(0, 0, w, h);
+  const R = Math.max(8, Math.min(w, h) / 2 - 10);
+  sctx.save(); sctx.translate(w / 2, h / 2);
+  sctx.strokeStyle = '#2b343d'; sctx.lineWidth = 1;
+  sctx.beginPath(); sctx.arc(0, 0, R, 0, Math.PI*2); sctx.stroke();
+
+  const inb = inbound(), sgn = S.turns === 'right' ? 1 : -1;
+  const H = rel => n360(inb + sgn * rel);
+  const arc = (relA, relB, col) => {
+    const a = (H(relA) - 90) * RAD, b = (H(relB) - 90) * RAD;
+    sctx.strokeStyle = col; sctx.lineWidth = 5;
+    sctx.beginPath(); sctx.arc(0, 0, R - 4, a, b, sgn < 0); sctx.stroke();
+  };
+  arc(290, 110 + 360, '#46c98b');  // direct, 180 deg
+  arc(110, 180, '#f0a848');        // teardrop, 70 deg
+  arc(180, 290, '#59b7e8');        // parallel, 110 deg
+
+  const lab = (rel, t, col) => {
+    const a = H(rel) * RAD, r = R - 22;
+    sctx.fillStyle = col; sctx.font = '600 11px ui-monospace,monospace';
+    sctx.textAlign = 'center'; sctx.textBaseline = 'middle';
+    sctx.fillText(t, r * Math.sin(a), -r * Math.cos(a));
+  };
+  lab(0, 'D', '#46c98b'); lab(145, 'T', '#f0a848'); lab(235, 'P', '#59b7e8');
+
+  const hd = (S.answer ? S.answer.hdg : S.ac.hdg) * RAD;
+  sctx.strokeStyle = '#ffffff'; sctx.lineWidth = 2;
+  sctx.beginPath(); sctx.moveTo(0, 0); sctx.lineTo(R * Math.sin(hd), -R * Math.cos(hd)); sctx.stroke();
+  sctx.restore();
+
+  const rel = S.answer ? S.answer.rel : (S.turns === 'right' ? n360(S.ac.hdg - inb) : n360(inb - S.ac.hdg));
+  $('sectorTxt').innerHTML =
+    `Inbound course ${pad3(inb)}<br>Heading ${pad3(S.answer ? S.answer.hdg : S.ac.hdg)}<br>` +
+    `Relative ${Math.round(rel)}&deg; ${S.turns === 'right' ? 'CW' : 'CCW'}<br>` +
+    `<span style="color:#8f9aa4">D 180&deg; · T 70&deg; · P 110&deg;</span>`;
+}
+
+/* ============================ readouts ============================ */
+function draw() {
+  drawMap(); drawHSI(); drawSector();
+  $('rHdg').textContent = pad3(dgHdg());
+  $('rObs').textContent = pad3(S.obs);
+  if (document.activeElement !== $('setObs')) $('setObs').value = Math.round(n360(S.obs)) % 360;
+  if (document.activeElement !== $('setBug')) $('setBug').value = Math.round(n360(S.bug)) % 360;
+  $('rRad').textContent = pad3(radialOf());
+  $('rDme').textContent = dme().toFixed(1);
+  $('rTimer').textContent = mmss(S.timer.t);
+  $('tState').textContent = touchOn() ? timerLbl() : (S.timer.run ? 'running' : 'stopped');
+  $('tbTime').textContent = mmss(S.timer.t);
+  $('tbTimerLbl').textContent = timerLbl();
+  $('tbTimer').classList.toggle('on', S.timer.run);
+  $('tbFF').classList.toggle('on', S.ff);
+  $('tbMult').textContent = '\u00d7' + S.ffMult;
+  $('tbL').classList.toggle('act', S.turnCmd < 0);
+  $('tbR').classList.toggle('act', S.turnCmd > 0);
+  $('timerBox').classList.toggle('run', S.timer.run);
+  const tgt = S.legNm ? `${S.legNm} NM legs` : `${mmss(S.legSec)} legs`;
+  $('lapInfo').textContent = tgt;
+
+  const g = gsVec(), gs = Math.hypot(g.x, g.y) * 3600;
+  const sideV = (S.ac.x * Math.sin((inbound() + 90) * RAD) + S.ac.y * Math.cos((inbound() + 90) * RAD)) * holdSideSign();
+  const flag = S.paused ? '<span style="color:#e2564f">PAUSED</span>'
+             : S.ff ? `<span style="color:#46c98b">FAST FWD ${S.ffMult}&times;</span>` : '';
+  $('stageStatus').innerHTML =
+    `<span>GS ${Math.round(gs)} KT</span><span>TAS ${Math.round(S.ac.tas)} KT</span>` +
+    (S.wind.spd ? `<span>WIND ${pad3(S.wind.dir)}/${S.wind.spd}</span>` : '') +
+    (S.hsiStyle === 'g5' && S.navSrc === 'gps'
+      ? `<span>XTK ${Math.abs(gpsDev().xtk).toFixed(2)} NM ${gpsDev().xtk >= 0 ? 'R' : 'L'}</span>` : '') +
+    `<span style="color:${sideV >= 0 ? '#6f7c87' : '#c08a3a'}">${sideV >= 0 ? 'HOLDING SIDE' : 'NON-HOLDING SIDE'}</span>` + flag;
+  const hs = $('hdrState');
+  hs.textContent = S.paused ? 'PAUSED' : S.ff ? 'FF ' + S.ffMult + '\u00d7' : '';
+  hs.style.color = S.paused ? 'var(--red)' : 'var(--grn)';
+}
+
+function renderVerdict() {
+  const el = $('verdict');
+  if (!S.answer) {
+    el.innerHTML = S.call_entry
+      ? `<div class="verdict info">Called <b>${S.call_entry.toUpperCase()}</b>. The recommended entry is revealed when you cross the fix.</div>`
+      : `<div class="verdict info">Call your entry before the fix if you want it checked. Optional — you can just fly.</div>`;
+    return;
+  }
+  const ok = S.call_entry === S.answer.rec;
+  const cls = !S.call_entry ? 'info' : (ok ? 'ok' : 'no');   // no call is not a wrong answer
+  const head = !S.call_entry
+    ? `Recommended entry: <b>${S.answer.rec.toUpperCase()}</b>`
+    : ok ? `Correct — <b>${S.answer.rec.toUpperCase()}</b>`
+         : `You called <b>${S.call_entry.toUpperCase()}</b>. Recommended: <b>${S.answer.rec.toUpperCase()}</b>`;
+  const near = [110, 180, 290].some(b => Math.abs(n180(S.answer.rel - b)) < 5);
+  el.innerHTML =
+    `<div class="verdict ${cls}">${head}${near ? ' <span style="opacity:.8">(within 5&deg; of a sector boundary — either adjacent entry is acceptable)</span>' : ''}
+      <span class="how">Crossed the fix on ${pad3(S.answer.hdg)}, ${Math.round(S.answer.rel)}&deg; from the inbound course ${pad3(inbound())} measured toward the ${S.turns === 'right' ? 'right' : 'left'}.</span>
+      <span class="how">${entryHow(S.answer.rec)}</span></div>`;
+}
+
+function renderLaps() {
+  const tb = $('lapBody');
+  tb.innerHTML = S.crossings.slice(-8).map(c =>
+    `<tr><td>${c.n}</td><td>${c.lap === null ? '—' : mmss(c.lap)}</td><td>${pad3(c.hdg)}</td>` +
+    `<td>${(c.err >= 0 ? 'R ' : 'L ') + Math.abs(c.err).toFixed(2)}</td><td>${c.max.toFixed(1)}</td></tr>`).join('');
+}
+
+function syncEntryBtns() {
+  document.querySelectorAll('[data-e]').forEach(b =>
+    b.classList.toggle('sel', b.dataset.e === S.call_entry));
+}
+
+/* ============================ input ============================ */
+const held = new Set();
+function applyTurn() {
+  const h = (held.has('L') ? -1 : 0) + (held.has('R') ? 1 : 0);
+  S.turnCmd = h !== 0 ? h : (S.latch || 0);      // a held control always wins over a latch
+}
+
+/* one tap runs, the next stops, the next zeroes it */
+function timerTap() {
+  if (S.timer.run) S.timer.run = false;
+  else if (S.timer.t > 0) S.timer.t = 0;
+  else S.timer.run = true;
+}
+const touchOn = () => document.body.classList.contains('touch');
+const timerLbl = () => S.timer.run ? 'Tap to stop' : (S.timer.t > 0 ? 'Tap to reset' : 'Tap to start');
+
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  const k = e.code, sh = e.shiftKey;
+  const stop = () => { e.preventDefault(); e.stopPropagation(); };
+
+  if (k === 'Escape') { $('help').classList.remove('show'); return; }
+  if (k === 'KeyH') { stop(); $('help').classList.toggle('show'); return; }
+
+  if (k === 'KeyA' || k === 'ArrowLeft') {
+    stop();
+    if (S.latchMode) { S.latch = S.latch === -1 ? 0 : -1; } else held.add('L');
+    applyTurn(); return;
+  }
+  if (k === 'KeyD' || k === 'ArrowRight') {
+    stop();
+    if (S.latchMode) { S.latch = S.latch === 1 ? 0 : 1; } else held.add('R');
+    applyTurn(); return;
+  }
+  if (k === 'Space') { stop(); S.ff = true; return; }
+  if (e.repeat && !['BracketLeft','BracketRight','Backslash','KeyP','Semicolon','Quote','Minus','Equal'].includes(k)) return;
+
+  switch (k) {
+    case 'KeyT': stop(); if (sh) { S.timer.t = 0; S.timer.run = true; } else S.timer.run = !S.timer.run; break;
+    case 'KeyR': stop(); if (sh) { restart(); } else { S.timer.t = 0; S.timer.run = false; } break;
+    case 'KeyZ': stop(); if (!S.prompting) S.paused = !S.paused; break;
+    case 'KeyP':         stop(); S.obs = n360(S.obs - 10); break;
+    case 'BracketLeft':  stop(); S.obs = n360(S.obs - (sh ? 10 : 1)); break;
+    case 'BracketRight': stop(); S.obs = n360(S.obs + (sh ? 10 : 1)); break;
+    case 'Backslash':    stop(); S.obs = n360(S.obs + 10); break;
+    case 'KeyO': stop(); S.obs = inbound(); break;
+    case 'Semicolon': stop(); S.bug = n360(S.bug - (sh ? 10 : 1)); break;
+    case 'Quote':     stop(); S.bug = n360(S.bug + (sh ? 10 : 1)); break;
+    case 'KeyK': stop(); if (sh) alignDG(); else S.bug = Math.round(dgHdg()); break;
+    case 'Digit1': stop(); setEntry('direct'); break;
+    case 'Digit2': stop(); setEntry('parallel'); break;
+    case 'Digit3': stop(); setEntry('teardrop'); break;
+    case 'Enter': stop(); if (S.hsiStyle === 'g5') g5Cycle(); break;
+    case 'KeyG': stop(); setHsi(HSI_CYCLE[(HSI_CYCLE.indexOf(curHsi()) + 1) % 3]); break;
+    case 'KeyM': stop(); setMapVisible(document.body.classList.contains('nomap')); break;
+    case 'KeyC': stop(); document.body.classList.toggle('norail'); break;
+    case 'KeyB': stop(); toggle('crumbs'); break;
+    case 'KeyI': stop(); toggle('ideal'); break;
+    case 'KeyF': stop(); toggle('follow'); break;
+    case 'KeyN': stop(); if (sh) reposition(); else newScenario(true); break;
+    case 'Minus': stop(); S.zoom = clamp(S.zoom / 1.15, 4, 260); break;
+    case 'Equal': stop(); S.zoom = clamp(S.zoom * 1.15, 4, 260); break;
+  }
+});
+
+addEventListener('keyup', e => {
+  const k = e.code;
+  if (k === 'KeyA' || k === 'ArrowLeft')  held.delete('L');
+  if (k === 'KeyD' || k === 'ArrowRight') held.delete('R');
+  if (k === 'Space') S.ff = false;
+  applyTurn();
+});
+addEventListener('blur', () => { held.clear(); S.ff = false; applyTurn(); });
+
+function alignDG() { S.gyroErr = 0; }
+
+function openEntryPrompt() {
+  S.prompting = true; S.paused = true;
+  held.clear(); applyTurn();
+  $('entryPrompt').classList.add('show');
+}
+function closeEntryPrompt(resume) {
+  if (!S.prompting) return;
+  S.prompting = false;
+  if (resume) S.paused = false;
+  $('entryPrompt').classList.remove('show');
+}
+
+/* The map lives in the side rail on a desktop and in the stage on a tablet,
+   where the rail is a slide-over and would otherwise bury it. Same element and
+   same canvas either way, so every layer toggle follows it across. */
+function placeMap() {
+  const blk = $('mapBlock');
+  const host = document.body.classList.contains('touch') ? $('mapSlot') : $('railMapSlot');
+  if (blk.parentElement !== host) host.appendChild(blk);
+}
+function setMapVisible(on) {
+  document.body.classList.toggle('nomap', !on);
+  $('mapOnOff').textContent = on ? 'Hide' : 'Show';
+}
+function setEntry(v) {
+  if (S.prompting) {                 // answering the prompt is always allowed
+    S.call_entry = v; closeEntryPrompt(true); syncEntryBtns(); renderVerdict(); return;
+  }
+  if (S.answer) return;              // otherwise the call closes at the fix
+  S.call_entry = v; syncEntryBtns(); renderVerdict();
+}
+function setHsi(v) {
+  S.hsiStyle = v === 'mech' ? 'mech' : 'g5';
+  S.navSrc   = v === 'g5gps' ? 'gps' : 'vloc';
+  document.querySelectorAll('[data-hsi]').forEach(b => b.classList.toggle('on', b.dataset.hsi === v));
+  navInit();
+}
+const HSI_CYCLE = ['mech', 'g5vloc', 'g5gps'];
+function curHsi() { return S.hsiStyle === 'mech' ? 'mech' : (S.navSrc === 'gps' ? 'g5gps' : 'g5vloc'); }
+function toggle(name) {
+  S.show[name] = S.show[name] ? 0 : 1;
+  const b = document.querySelector(`[data-t="${name}"]`);
+  if (b) b.classList.toggle('on', !!S.show[name]);
+}
+
+document.querySelectorAll('[data-t]').forEach(b => b.onclick = () => toggle(b.dataset.t));
+document.querySelectorAll('[data-e]').forEach(b => b.onclick = () => { try { setEntry(b.dataset.e); } catch (err) { showFatal('Entry', err); } });
+document.querySelectorAll('[data-hsi]').forEach(b => b.onclick = () => setHsi(b.dataset.hsi));
+$('zin').onclick  = () => S.zoom = clamp(S.zoom * 1.25, 4, 260);
+$('zout').onclick = () => S.zoom = clamp(S.zoom / 1.25, 4, 260);
+mapCv.addEventListener('wheel', e => { e.preventDefault(); S.zoom = clamp(S.zoom * (e.deltaY < 0 ? 1.12 : 1/1.12), 4, 260); }, { passive: false });
+
+/* ---------------- instrument interaction ----------------
+   Steam gauges: drag the face or roll the wheel to turn the OBS knob.
+   G5: one push-and-turn rotary encoder at the lower right. Pressing it cycles
+   which field the knob edits, turning it edits that field. */
+const angAt = (el, e) => {
+  const r = el.getBoundingClientRect();
+  return Math.atan2(e.clientX - (r.left + r.width / 2), -(e.clientY - (r.top + r.height / 2))) / RAD;
+};
+const angAbout = (el, e, k) => {
+  const r = el.getBoundingClientRect();
+  return Math.atan2(e.clientY - r.top - k.y, e.clientX - r.left - k.x) / RAD;
+};
+const overKnob = (el, e, k, slack) => {
+  if (!k) return false;
+  const r = el.getBoundingClientRect();
+  return Math.hypot(e.clientX - r.left - k.x, e.clientY - r.top - k.y) < k.r * (slack || 1.45);
+};
+
+function g5Cycle() { S.g5Field = S.g5Field === 'hdg' ? 'crs' : 'hdg'; }
+/* deg = change applied to the selected field, spin = how far the knob turns */
+function tune(deg, spin) {
+  if (S.hsiStyle !== 'g5') { S.obs = n360(S.obs + deg); return; }
+  S.knobAngle = n360(S.knobAngle + (spin === undefined ? deg * 12 : spin));
+  if (S.g5Field === 'crs') S.obs = n360(S.obs + deg);
+  else                     S.bug = n360(S.bug + deg);
+}
+
+let dragging = false, dragPrev = 0, dragSpun = 0, onKnob = false;
+hsiCv.addEventListener('pointerdown', e => {
+  onKnob = S.hsiStyle === 'g5' && overKnob(hsiCv, e, S.hitG5);
+  dragPrev = onKnob ? angAbout(hsiCv, e, S.hitG5) : angAt(hsiCv, e);
+  dragSpun = 0; dragging = true; hsiCv.setPointerCapture(e.pointerId);
+});
+hsiCv.addEventListener('pointermove', e => {
+  if (!dragging) return;
+  const a = onKnob ? angAbout(hsiCv, e, S.hitG5) : angAt(hsiCv, e);
+  const d = n180(a - dragPrev); dragPrev = a; dragSpun += Math.abs(d);
+  if (onKnob) tune(d * 0.5, d);          // knob follows the finger, value at half rate
+  else        tune(d);
+});
+hsiCv.addEventListener('pointerup', () => {
+  if (onKnob && dragSpun < 5) g5Cycle();  // a press, not a twist
+  dragging = false; onKnob = false;
+});
+hsiCv.addEventListener('pointermove', e => {
+  hsiCv.style.cursor = (S.hsiStyle === 'g5' && overKnob(hsiCv, e, S.hitG5)) ? 'pointer' : 'grab';
+});
+
+const wheelAdj = (el, fn) => el.addEventListener('wheel', e => {
+  e.preventDefault();
+  fn((e.deltaY < 0 ? 1 : -1) * (e.shiftKey ? 10 : 1));
+}, { passive: false });
+wheelAdj(hsiCv, d => tune(d));
+wheelAdj(dgCv,  d => S.bug = n360(S.bug + d));
+
+// double-clicking the DG knob is the equivalent of pushing and slewing it
+dgCv.addEventListener('dblclick', e => { if (overKnob(dgCv, e, S.hitHdg, 1.8)) alignDG(); });
+
+let dgDrag = false, dgPrev = 0;
+dgCv.addEventListener('pointerdown', e => { dgPrev = angAt(dgCv, e); dgDrag = true; dgCv.setPointerCapture(e.pointerId); });
+dgCv.addEventListener('pointermove', e => {
+  if (!dgDrag) return;
+  const a = angAt(dgCv, e); S.bug = n360(S.bug + n180(a - dgPrev)); dgPrev = a;
+});
+dgCv.addEventListener('pointerup', () => dgDrag = false);
+
+$('setTas').oninput   = e => S.ac.tas = clamp(+e.target.value || 100, 40, 300);
+$('setWdir').oninput  = e => S.wind.dir = n360(+e.target.value || 0);
+$('setWspd').oninput  = e => S.wind.spd = clamp(+e.target.value || 0, 0, 99);
+$('setAlt').oninput   = e => S.alt = clamp(+e.target.value || 4000, 200, 40000);
+$('setCone').oninput  = e => S.coneAng = clamp(+e.target.value || 30, 3, 70);
+$('setGps').onchange   = e => S.gpsScale = +e.target.value;
+$('setObs').oninput    = e => S.obs = n360(+e.target.value || 0);
+$('setBug').oninput    = e => S.bug = n360(+e.target.value || 0);
+$('setDrift').oninput  = e => S.gyroDrift = clamp(+e.target.value || 0, 0, 60);
+$('btnAlign').onclick  = () => alignDG();
+$('setRate').onchange = e => S.rate = +e.target.value;
+$('setFF').onchange   = e => S.ffMult = +e.target.value;
+$('setStart').onchange= e => { S.startMode = e.target.value; };
+$('setForce').onchange= e => { S.forceEntry = e.target.value; };
+$('setRandWind').onchange = e => S.randWind = e.target.checked;
+$('setLatch').onchange= e => { S.latchMode = e.target.checked; S.latch = 0; held.clear(); applyTurn(); };
+$('setAuto').onchange = e => S.autoTimer = e.target.checked;
+$('setCheat').onchange= e => S.cheat = e.target.checked;
+$('setReal').onchange = e => { S.realPhrase = e.target.checked; buildClearance(); };
+$('btnNew').onclick   = () => newScenario(true);
+$('btnReset').onclick = () => reposition();
+$('btnRestart').onclick = () => restart();
+$('btnHelp').onclick = () => $('help').classList.add('show');
+$('btnApply').onclick = () => {
+  S.radial = n360(+$('setRadial').value || 0);
+  S.turns = $('setTurns').value;
+  S.fixDme = clamp(+$('setFixDme').value || 0, 0, 60);
+  setLeg($('setLeg').value);
+  S.efcMin = 25;
+  reposition(); buildClearance();
+};
+$('help').onclick = () => $('help').classList.remove('show');
+$('timerCard').onclick = () => timerTap();
+$('railClose').onclick = () => document.body.classList.add('norail');
+$('mapOnOff').onclick = () => setMapVisible(document.body.classList.contains('nomap'));
+$('epSkip').onclick = () => { closeEntryPrompt(true); renderVerdict(); };
+
+/* ---------------- touch controls ---------------- */
+function holdBtn(el, down, up) {
+  el.addEventListener('pointerdown', e => {
+    e.preventDefault(); el.setPointerCapture(e.pointerId); el.classList.add('act'); down();
+  });
+  const end = () => { el.classList.remove('act'); up(); };
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => el.addEventListener(t, end));
+}
+function touchTurn(dir, down) {
+  if (S.latchMode) { if (down) { S.latch = S.latch === dir ? 0 : dir; applyTurn(); } return; }
+  const k = dir < 0 ? 'L' : 'R';
+  down ? held.add(k) : held.delete(k);
+  applyTurn();
+}
+holdBtn($('tbL'), () => touchTurn(-1, true), () => touchTurn(-1, false));
+holdBtn($('tbR'), () => touchTurn( 1, true), () => touchTurn( 1, false));
+$('tbTimer').onclick = () => timerTap();
+$('tbFF').onclick    = () => S.ff = !S.ff;
+$('tbMult').onclick  = () => {
+  const opts = [2, 4, 8, 16];
+  S.ffMult = opts[(opts.indexOf(S.ffMult) + 1) % opts.length];
+  $('setFF').value = String(S.ffMult);
+};
+
+function setTouch(on) {
+  document.body.classList.toggle('touch', on);
+  $('setTouch').checked = on;
+  if (!on) S.ff = false;
+  placeMap();
+}
+addEventListener('resize', placeMap);
+$('setTouch').onchange = e => setTouch(e.target.checked);
+
+// pinch zoom and the long-press callout get in the way of a cockpit panel
+['gesturestart', 'gesturechange', 'gestureend'].forEach(t =>
+  document.addEventListener(t, e => e.preventDefault(), { passive: false }));
+
+/* Anything that is not one of the scrolling regions must not move the page.
+   Without this a drag on a knob or a bezel drags the whole document with it. */
+const SCROLLERS = '.scroll,#sideCol,#help,#verdict';
+document.addEventListener('touchmove', e => {
+  const t = e.target;
+  if (!t || !t.closest || !t.closest(SCROLLERS)) e.preventDefault();
+}, { passive: false });
+document.addEventListener('selectstart', e => {
+  if (!e.target.closest || !e.target.closest('input,textarea')) e.preventDefault();
+});
+document.addEventListener('contextmenu', e => {
+  if (e.target.closest('#touchbar') || e.target.tagName === 'CANVAS') e.preventDefault();
+});
+
+// keep the screen alive through a four minute lap
+let wakeLock = null;
+async function keepAwake() {
+  try {
+    if ('wakeLock' in navigator && !wakeLock) {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    }
+  } catch (e) { /* not supported, or denied */ }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') keepAwake();
+});
+addEventListener('pointerdown', keepAwake, { once: true });
+$('btnRail').onclick = () => document.body.classList.toggle('norail');
+
+/* Callable from the console: newRandomScenario() or newRandomScenario({radial:217,turns:'left',force:'teardrop'}) */
+window.newRandomScenario = opts => {
+  if (opts) {
+    if (opts.radial !== undefined) { S.radial = n360(opts.radial); $('setRadial').value = Math.round(S.radial); }
+    if (opts.turns)  { S.turns = opts.turns;  $('setTurns').value = S.turns; }
+    if (opts.leg !== undefined) { setLeg(opts.leg); $('setLeg').value = String(opts.leg); }
+    if (opts.force)  { S.forceEntry = opts.force; $('setForce').value = S.forceEntry; }
+    reposition(); buildClearance();
+  } else newScenario(true);
+  return { radial: S.radial, turns: S.turns, heading: Math.round(S.ac.hdg), dme: +dme().toFixed(1) };
+};
+
+/* ============================ go ============================ */
+S.latchMode = false;
+S.efcMin = 25;
+setMapVisible(true);
+setTouch(matchMedia('(hover: none) and (pointer: coarse)').matches);
+if (innerWidth <= 1200) document.body.classList.add('norail');
+newScenario(true);
+requestAnimationFrame(frame);
+})();
+</script>
+
+
+</body></html>
