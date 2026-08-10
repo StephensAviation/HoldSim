@@ -1,6 +1,6 @@
 # Holding Pattern Simulator
 
-Live at <https://stephensaviation.github.io/holdsim>
+Live at <https://stephensaviation.github.io/HoldSim>
 
 A single-page holding pattern trainer. No build step, no dependencies, no network
 calls. Drop the folder on any static host and it runs.
@@ -25,14 +25,14 @@ Every path in the app is relative, so it works from a repository subpath such as
 git init -b main
 git add .
 git commit -m "VOR holding trainer"
-git remote add origin git@github.com:stephensaviation/holdsim.git
+git remote add origin git@github.com:stephensaviation/HoldSim.git
 git push -u origin main
 ```
 
 Then Settings -> Pages -> Source: **Deploy from a branch** -> Branch: **main**,
 folder **/ (root)** -> Save. The repository must be public unless you pay for
 Pages on private repositories. The site appears at
-`https://stephensaviation.github.io/holdsim/` after a minute or so.
+`https://stephensaviation.github.io/HoldSim/` after a minute or so.
 
 To publish updates, bump the `CACHE` constant in `sw.js`, then commit and push.
 
