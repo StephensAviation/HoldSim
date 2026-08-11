@@ -437,8 +437,16 @@
       <div class="sect">Scenario</div>
       <div class="setline"><label>Radial</label><input type="number" id="setRadial" min="0" max="359" step="1" value="217"></div>
       <div class="setline"><label>Turns</label><select id="setTurns"><option value="right">Right (standard)</option><option value="left">Left</option></select></div>
-      <div class="setline"><label>Hold fix (DME out on the radial, 0 = overhead)</label>
-        <input type="number" id="setFixDme" min="0" max="60" step="1" value="0"></div>
+      <div class="setline"><label>Hold type</label><select id="setHoldType">
+        <option value="any">Either &middot; mixed</option>
+        <option value="vor">VOR &middot; timed legs</option>
+        <option value="rnav">RNAV &middot; GPS, mileage legs</option></select></div>
+      <div class="setline"><label>Hold fix</label><select id="setFixMode">
+        <option value="any">Either &middot; mixed</option>
+        <option value="over">At the fix &middot; overhead the station</option>
+        <option value="out">Out on the radial &middot; distance below</option></select></div>
+      <div class="setline"><label>Distance from the station (DME)</label>
+        <input type="number" id="setFixDme" min="1" max="60" step="1" value="15"></div>
       <div class="setline"><label>Legs</label><select id="setLeg">
         <option value="60">1 minute &middot; timed</option><option value="90">1.5 minutes &middot; timed</option>
         <option value="d4">4 miles &middot; RNAV</option><option value="d5">5 miles &middot; RNAV</option>
@@ -593,6 +601,10 @@
     <h2>The four scenario buttons</h2>
     <p><b>New random</b> rolls a fresh clearance and a fresh arrival — a completely new problem. <b>Apply fields</b> takes the radial, turns, legs, arrival and forced entry type from the boxes and builds that clearance, then gives you an arrival for it. <b>New arrival</b> keeps the clearance you have and drops you in from somewhere else, which is how you drill one hold from every direction. <b>Restart this one</b> puts you back on the exact heading and position you began with, clock and trail wiped, so you can refly an entry you got wrong and compare.</p>
 
+    <h2>Choosing what you practise</h2>
+    <p>Two menus in the panel decide what ATC hands you. <b>Hold type</b> is either a VOR hold on the clock or an RNAV hold on mileage legs, or left mixed. Pick RNAV and the steam gauges grey out in both places they appear, in the equipment list and on the selector above the readouts, because a mechanical CDI has no way to measure a leg in miles. The leg lengths on offer follow the same rule, so you cannot end up with a combination that could not be flown.</p>
+    <p><b>Hold fix</b> is either overhead the station or out along the radial at a distance you set, or mixed. Out on the radial is the case a controller gives you when they say to hold fifteen miles out: the DME window still reads to the station, so that is how you find the fix, and you never touch the cone of confusion the whole lap.</p>
+
     <h2>Equipment</h2>
     <p>The panel has tick boxes for what is fitted: the CDI head with its directional gyro, the G5, and a heading autopilot. Take the G5 out and the aeroplane is no longer RNAV capable, so the mileage leg options grey out and ATC stops issuing them — you will only ever be given timed holds. Take the CDI head out and you are on the glass alone. One nav display always has to stay fitted, so unticking the last one puts it straight back.</p>
     <p>The autopilot is a single-axis heading holder, the kind that has one job. Flick the rocker and it captures whatever heading you are on, then the three digit window shows the selected heading and the knob changes it. The two arrow lamps annunciate the direction it is turning, so as soon as you wind the knob one way the corresponding lamp lights and stays lit until the turn is complete. It turns the way you wind the knob rather than taking the shortest way round, so winding left through 270 flies a left 270 instead of a right 90, and a full 360 is just a whole turn of the knob. It rolls into a standard rate turn and eases off inside the last twelve degrees rather than slamming to wings level. Touching any turn control disconnects it, exactly as gripping the yoke does on the real thing, so you never end up fighting it for the controls.</p>
@@ -687,7 +699,7 @@ const S = {
   turnCmd: 0, latch: 0,
   vor: VORS[0], call: CALLS[0],
   radial: 217, turns: 'right', legSec: 60, legNm: 0, fixDme: 0,
-  obs: 37, bug: 0, alt: 4000, coneAng: 30, hsiStyle: 'mech', gpsScale: 1.0,
+  obs: 37, bug: 0, alt: 4000, coneAng: 30, hsiStyle: 'mech', gpsScale: 1.0, holdType: 'any', fixMode: 'any',
   eq: { cdi: true, g5: false, ap: false },
   ap: { on: false, hdg: 0, knob: 0, togo: 0 }, gyroDrift: 0, gyroErr: 0, startState: null,
   prompting: false, g5Field: 'hdg', knobAngle: 0, hitG5: null, hitObs: null, hitHdg: null,
@@ -716,6 +728,7 @@ const fixDist = () => { const F = fixPos(); return Math.hypot(S.ac.x - F.x, S.ac
    else is a conventional VOR hold and belongs on the green needle. The pilot
    does not pick this — the clearance does. */
 const isRnav = () => !!S.legNm;
+const rnavLocked = () => S.holdType === 'rnav' || isRnav();   // greys the steam gauges out
 const navSrc = () => isRnav() ? 'gps' : 'vloc';
 const dgHdg = () => S.hsiStyle === 'mech' ? n360(S.ac.hdg + S.gyroErr) : S.ac.hdg;
 const inbound = () => n360(S.radial + 180);
@@ -897,18 +910,17 @@ function newScenario(randomize) {
   if (randomize) {
     S.radial = Math.floor(Math.random() * 360);
     S.turns = Math.random() < 0.5 ? 'right' : 'left';
-    /* Most holds are over the station and timed. A DME fix out on the radial is
-       still a timed hold. Mileage legs only turn up on the RNAV ones. */
-    const roll = Math.random();
-    let pick;
-    if (roll < 0.55)      { S.fixDme = 0;  pick = Math.random() < 0.8 ? 60 : 90; }
-    else if (roll < 0.85) { S.fixDme = 5 + Math.floor(Math.random() * 21); pick = Math.random() < 0.8 ? 60 : 90; }
-    else if (!S.eq.g5)    { S.fixDme = Math.random() < 0.5 ? 0 : 8 + Math.floor(Math.random() * 21);
-                            pick = 60; }                       // not RNAV capable
-    else                  { S.fixDme = Math.random() < 0.5 ? 0 : 8 + Math.floor(Math.random() * 15);
-                            pick = ['d4', 'd5', 'd10'][Math.floor(Math.random() * 3)]; }
+    /* Both menus are honoured. Left on "either", most holds come out over the
+       station and timed, with mileage legs only on the RNAV ones. */
+    const wantRnav = S.holdType === 'rnav' ||
+                     (S.holdType === 'any' && S.eq.g5 && Math.random() < 0.25);
+    S.fixDme = S.fixMode === 'over' ? 0
+             : S.fixMode === 'out'  ? clamp(+$('setFixDme').value || 15, 1, 60)
+             : (Math.random() < 0.55 ? 0 : 5 + Math.floor(Math.random() * 21));
+    const pick = wantRnav ? ['d4', 'd5', 'd10'][Math.floor(Math.random() * 3)]
+                          : (Math.random() < 0.8 ? 60 : 90);
     setLeg(pick);
-    $('setFixDme').value = S.fixDme;
+    if (S.fixMode !== 'out') $('setFixDme').value = S.fixDme || 15;
     S.vor = VORS[Math.floor(Math.random() * VORS.length)];
     S.call = CALLS[Math.floor(Math.random() * CALLS.length)];
     S.efcMin = 20 + Math.floor(Math.random() * 25);
@@ -1449,13 +1461,13 @@ function drawDG() {
   caseAndFace(c, S0, F);
   compassCard(c, F, dgHdg(), true, '#e8e6df', '#f2f0e8', 0.165);
 
-  // heading bug rides the card
+  // heading bug rides the card: a slim outlined marker, not a painted slab
   c.save(); c.rotate((S.bug - dgHdg()) * RAD);
-  c.fillStyle = CYN;
+  c.strokeStyle = '#a8842f'; c.lineWidth = Math.max(1.2, F * 0.020); c.lineJoin = 'miter';
   c.beginPath();
-  c.moveTo(-F * 0.085, -F * 0.985); c.lineTo(F * 0.085, -F * 0.985);
-  c.lineTo(F * 0.05, -F * 0.855); c.lineTo(-F * 0.05, -F * 0.855);
-  c.closePath(); c.fill();
+  c.moveTo(-F * 0.062, -F * 0.985); c.lineTo(-F * 0.062, -F * 0.898); c.lineTo(-F * 0.024, -F * 0.878);
+  c.moveTo( F * 0.062, -F * 0.985); c.lineTo( F * 0.062, -F * 0.898); c.lineTo( F * 0.024, -F * 0.878);
+  c.stroke();
   c.restore();
 
   // fixed lubber line and aircraft symbol
@@ -1533,18 +1545,6 @@ function drawG5() {
   c.moveTo( 9, -R + 2); c.lineTo( 9, -R + 13); c.lineTo( 4, -R + 13);
   c.stroke(); c.restore();
 
-  /* Ground track. Where the aeroplane is actually going once the wind has had
-     its say, which is not the heading it is pointing unless the air is still. */
-  const gv = gsVec();
-  if (Math.hypot(gv.x, gv.y) > 1e-9) {
-    const trk = n360(Math.atan2(gv.x, gv.y) / RAD);
-    c.save(); c.rotate(trk * RAD);
-    c.fillStyle = MAG;
-    c.beginPath();
-    c.moveTo(0, -R + 15); c.lineTo(-6.5, -R + 1); c.lineTo(6.5, -R + 1);
-    c.closePath(); c.fill();
-    c.restore();
-  }
 
   const showDev = N.valid > 0.5;
   c.save(); c.rotate(S.obs * RAD);
@@ -1585,6 +1585,21 @@ function drawG5() {
   c.fillStyle = '#fff';
   c.beginPath(); c.moveTo(0, -R + 2); c.lineTo(-7, -R + 15); c.lineTo(7, -R + 15);
   c.closePath(); c.fill();
+
+  /* Track bug. Where the aeroplane is actually going once the wind has had its
+     say. Rides the rim of the rose and is drawn last so it reads over the lubber
+     line; in still air it sits under it, exactly as the real one does. The gap
+     between the two is your drift. */
+  const gv = gsVec();
+  if (Math.hypot(gv.x, gv.y) > 1e-9) {
+    const trk = n360(Math.atan2(gv.x, gv.y) / RAD);
+    c.save(); c.rotate((trk - S.ac.hdg) * RAD);
+    c.fillStyle = MAG;
+    c.beginPath();
+    c.moveTo(0, -R + 14); c.lineTo(-4.5, -R + 1); c.lineTo(4.5, -R + 1);
+    c.closePath(); c.fill();
+    c.restore();
+  }
 
   c.beginPath();                                 // aircraft glyph
   c.moveTo(0, -15); c.lineTo(2.5, -6); c.lineTo(15, 2); c.lineTo(15, 5.5);
@@ -1989,7 +2004,10 @@ function setEntry(v) {
 }
 function setHsi(v) { setNavDisplay(v === 'g5' ? 'g5' : 'mech'); }
 function syncHsiBtns() {
-  const rnav = isRnav();
+  const rnav = rnavLocked();
+  $('eqCdi').disabled = rnav;
+  $('eqCdi').parentElement.style.opacity = rnav ? .4 : 1;
+  $('setFixDme').disabled = S.fixMode === 'over';
   document.querySelectorAll('[data-hsi]').forEach(b => {
     const mech = b.dataset.hsi === 'mech';
     b.disabled = mech && rnav;
@@ -1997,8 +2015,35 @@ function syncHsiBtns() {
     b.title = mech && rnav ? 'Mileage legs need GPS — a mechanical CDI cannot fly an RNAV hold' : '';
     if (!mech) b.textContent = rnav ? 'G5 \u00b7 GPS' : 'G5 \u00b7 VOR';   // shows the source it picked
   });
-  // mileage legs are only offered to an RNAV aircraft
-  Array.from($('setLeg').options).forEach(o => { if (o.value[0] === 'd') o.disabled = !S.eq.g5; });
+  syncLegOptions();
+}
+
+/* Leg lengths follow the hold type, and mileage is only offered to an RNAV aircraft. */
+function syncLegOptions() {
+  const sel = $('setLeg');
+  Array.from(sel.options).forEach(o => {
+    const mile = o.value[0] === 'd';
+    o.disabled = mile ? (!S.eq.g5 || S.holdType === 'vor') : (S.holdType === 'rnav');
+  });
+  const cur = sel.options[sel.selectedIndex];
+  if (cur && cur.disabled) {
+    const first = Array.from(sel.options).find(o => !o.disabled);
+    if (first) { sel.value = first.value; setLeg(first.value); }
+  }
+}
+
+function setHoldType(v) {
+  S.holdType = v;
+  if (v === 'rnav') setNavDisplay('g5');       // mileage legs need the box that can fly them
+  syncLegOptions();
+  buildClearance();
+}
+function setFixMode(v) {
+  S.fixMode = v;
+  if (v === 'over') S.fixDme = 0;
+  else if (v === 'out') S.fixDme = clamp(+$('setFixDme').value || 15, 1, 60);
+  $('setFixDme').disabled = v === 'over';
+  buildClearance();
 }
 
 /* Fitting one nav display removes the other. The equipment radios and the
@@ -2025,7 +2070,7 @@ function toggle(name) {
 }
 
 document.querySelectorAll('[data-t]').forEach(b => b.onclick = () => toggle(b.dataset.t));
-document.querySelectorAll('[data-e]').forEach(b => b.onclick = () => { try { setEntry(b.dataset.e); } catch (err) { showFatal('Entry', err); } });
+document.querySelectorAll('[data-e]').forEach(b => tapBtn(b, () => { try { setEntry(b.dataset.e); } catch (err) { showFatal('Entry', err); } }));
 document.querySelectorAll('[data-hsi]').forEach(b => b.onclick = () => setHsi(b.dataset.hsi));
 $('zin').onclick  = () => S.zoom = clamp(S.zoom * 1.25, 4, 260);
 $('zout').onclick = () => S.zoom = clamp(S.zoom / 1.25, 4, 260);
@@ -2073,7 +2118,10 @@ hsiCv.addEventListener('pointermove', e => {
   const a = onKnob ? angAbout(hsiCv, e, S.hitG5) : angAt(hsiCv, e);
   const d = n180(a - dragPrev); dragPrev = a; dragSpun += Math.abs(d);
   if (onKnob) tune(d * 0.5, d);          // knob follows the finger, value at half rate
-  else        tune(d);
+  /* On the CDI head the whole card is driven by the OBS, so it turns the
+     opposite way on screen to the G5 course arrow. Invert the face drag there
+     so the card tracks your finger either way. The wheel and keys are unchanged. */
+  else        tune(S.hsiStyle === 'g5' ? d : -d);
 });
 ['pointerup', 'pointercancel'].forEach(t => hsiCv.addEventListener(t, e => {
   if (e.pointerId !== dragId) return;
@@ -2140,6 +2188,8 @@ $('setWdir').oninput  = e => S.wind.dir = n360(+e.target.value || 0);
 $('setWspd').oninput  = e => S.wind.spd = clamp(+e.target.value || 0, 0, 99);
 $('setAlt').oninput   = e => S.alt = clamp(+e.target.value || 4000, 200, 40000);
 $('setCone').oninput  = e => S.coneAng = clamp(+e.target.value || 30, 3, 70);
+$('setHoldType').onchange = e => setHoldType(e.target.value);
+$('setFixMode').onchange  = e => setFixMode(e.target.value);
 $('setGps').onchange   = e => S.gpsScale = +e.target.value;
 $('setObs').oninput    = e => S.obs = n360(+e.target.value || 0);
 $('setBug').oninput    = e => S.bug = n360(+e.target.value || 0);
@@ -2164,13 +2214,13 @@ $('btnHelp').onclick = () => $('help').classList.add('show');
 $('btnApply').onclick = () => {
   S.radial = n360(+$('setRadial').value || 0);
   S.turns = $('setTurns').value;
-  S.fixDme = clamp(+$('setFixDme').value || 0, 0, 60);
+  S.fixDme = S.fixMode === 'over' ? 0 : clamp(+$('setFixDme').value || 0, 0, 60);
   setLeg($('setLeg').value);
   S.efcMin = 25;
   reposition(); buildClearance();
 };
 $('help').onclick = () => $('help').classList.remove('show');
-$('timerCard').onclick = () => timerTap();
+tapBtn($('timerCard'), () => timerTap());
 $('railClose').onclick = () => document.body.classList.add('norail');
 $('mapOnOff').onclick = () => setMapVisible(document.body.classList.contains('nomap'));
 $('epSkip').onclick = () => { closeEntryPrompt(true); renderVerdict(); };
@@ -2178,6 +2228,21 @@ $('epSkip').onclick = () => { closeEntryPrompt(true); renderVerdict(); };
 /* ---------------- touch controls ---------------- */
 /* Each control tracks the finger that grabbed it and ignores every other one,
    so a second touch elsewhere cannot steal or release it. */
+/* iOS will not reliably deliver a click for a second simultaneous touch, so
+   taps fire on pointerdown. click stays bound for mouse and keyboard, deduped. */
+function tapBtn(el, fn) {
+  let viaPointer = 0;
+  el.addEventListener('pointerdown', e => {
+    viaPointer = Date.now();
+    if (e.cancelable) e.preventDefault();   // also stops the synthetic click that follows
+    fn();                                   // no rate limit: rapid taps all count
+  });
+  el.addEventListener('click', () => {
+    if (Date.now() - viaPointer < 700) return;   // a touch already handled this one
+    fn();                                        // keyboard activation only
+  });
+}
+
 function holdBtn(el, down, up) {
   let id = null;
   el.addEventListener('pointerdown', e => {
@@ -2199,13 +2264,13 @@ function touchTurn(dir, down) {
 }
 holdBtn($('tbL'), () => touchTurn(-1, true), () => touchTurn(-1, false));
 holdBtn($('tbR'), () => touchTurn( 1, true), () => touchTurn( 1, false));
-$('tbTimer').onclick = () => timerTap();
-$('tbFF').onclick    = () => S.ff = !S.ff;
-$('tbMult').onclick  = () => {
+tapBtn($('tbTimer'), () => timerTap());
+tapBtn($('tbFF'),    () => { S.ff = !S.ff; });
+tapBtn($('tbMult'),  () => {
   const opts = [2, 4, 8, 16];
   S.ffMult = opts[(opts.indexOf(S.ffMult) + 1) % opts.length];
   $('setFF').value = String(S.ffMult);
-};
+});
 
 function setTouch(on) {
   document.body.classList.toggle('touch', on);
