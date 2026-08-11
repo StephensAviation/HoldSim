@@ -680,7 +680,6 @@ const VORS = [
 const CALLS = ['N2145T','N738DK','N51219','N9032C','N466RS','N1204W','N63821'];
 const PTS = ['north','northeast','east','southeast','south','southwest','west','northwest'];
 const compass8 = b => PTS[Math.round(n360(b) / 45) % 8];
-const spellNum = s => String(s).split('').map(d => ['zero','one','two','three','four','five','six','seven','eight','nine'][+d]).join(' ');
 
 /* ============================ state ============================ */
 const S = {
@@ -872,14 +871,14 @@ function entryHow(kind) {
 function buildClearance() {
   const dir = compass8(S.radial);
   const rnav = !!S.legNm;               // mileage legs are an RNAV thing; time is the VOR way
-  const leg = rnav ? `<em>${S.legNm === 10 ? 'ten' : spellNum(S.legNm)} mile legs</em>`
-                   : `<em>${S.legSec === 90 ? 'one and a half minute' : 'one minute'} legs</em>`;
+  const leg = rnav ? `<em>${S.legNm} mile legs</em>`
+                   : `<em>${S.legSec === 90 ? '1.5' : '1'} minute legs</em>`;
   const turns = (S.turns === 'right' && S.realPhrase) ? '' : `, <em>${S.turns} turns</em>`;
   const fixName = S.fixDme
-    ? `the ${S.vor[0]} <em>${spellNum(S.fixDme)} DME fix</em>`
+    ? `the ${S.vor[0]} <em>${S.fixDme} DME fix</em>`
     : `the ${S.vor[0]} VOR`;
   $('clearance').innerHTML =
-    `${S.call}, hold <em>${dir}</em> of ${fixName} on the <em>${spellNum(pad3(S.radial))}</em> radial${turns}, ${leg}.`;
+    `${S.call}, hold <em>${dir}</em> of ${fixName} on the <em>${pad3(S.radial)}</em> radial${turns}, ${leg}.`;
 
   const now = new Date();
   const efc = new Date(now.getTime() + S.efcMin * 60000);
@@ -2232,7 +2231,8 @@ document.addEventListener('selectstart', e => {
   if (!e.target.closest || !e.target.closest('input,textarea')) e.preventDefault();
 });
 document.addEventListener('contextmenu', e => {
-  if (e.target.closest('#touchbar') || e.target.tagName === 'CANVAS') e.preventDefault();
+  const t = e.target;
+  if (t && t.closest && (t.closest('#touchbar') || t.tagName === 'CANVAS')) e.preventDefault();
 });
 
 // keep the screen alive through a four minute lap
