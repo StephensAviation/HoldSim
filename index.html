@@ -689,6 +689,10 @@ const VORS = [
   ['PDZ','PARADISE'],    ['SLI','SEAL BEACH'], ['SXC','SANTA CATALINA'],
   ['IPL','IMPERIAL'],    ['TRM','THERMAL'], ['PSP','PALM SPRINGS'], ['EED','NEEDLES']
 ];
+/* Five letter RNAV waypoints. An RNAV hold is at a named fix on a bearing, not
+   on a VOR radial, so the clearance names one of these instead of a station. */
+const WPTS = ['CHOWW','DOOEY','HUBRD','JOTLI','KIMMO','LUCKI','MOMAR','PEBLE',
+              'RUSTT','SLOAN','TOPGN','WYNNE','YEAGR','ZIGGY','BARET','DINTY'];
 const CALLS = ['N2145T','N738DK','N51219','N9032C','N466RS','N1204W','N63821'];
 const PTS = ['north','northeast','east','southeast','south','southwest','west','northwest'];
 const compass8 = b => PTS[Math.round(n360(b) / 45) % 8];
@@ -698,7 +702,7 @@ const S = {
   ac: { x: 0, y: -12, hdg: 0, tas: 100, turn: 0 },
   turnCmd: 0, latch: 0,
   vor: VORS[0], call: CALLS[0],
-  radial: 217, turns: 'right', legSec: 60, legNm: 0, fixDme: 0,
+  radial: 217, turns: 'right', legSec: 60, legNm: 0, fixDme: 0, wpt: 'CHOWW',
   obs: 37, bug: 0, alt: 4000, coneAng: 30, hsiStyle: 'mech', gpsScale: 1.0, holdType: 'any', fixMode: 'any',
   eq: { cdi: true, g5: false, ap: false },
   ap: { on: false, hdg: 0, knob: 0, togo: 0 }, gyroDrift: 0, gyroErr: 0, startState: null,
@@ -887,17 +891,19 @@ function buildClearance() {
   const leg = rnav ? `<em>${S.legNm} mile legs</em>`
                    : `<em>${S.legSec === 90 ? '1.5' : '1'} minute legs</em>`;
   const turns = (S.turns === 'right' && S.realPhrase) ? '' : `, <em>${S.turns} turns</em>`;
-  const fixName = S.fixDme
-    ? `the ${S.vor[0]} <em>${S.fixDme} DME fix</em>`
-    : `the ${S.vor[0]} VOR`;
+  const fixName = rnav ? `<em>${S.wpt}</em>`
+                : S.fixDme ? `the ${S.vor[0]} <em>${S.fixDme} DME fix</em>`
+                : `the ${S.vor[0]} VOR`;
+  const line = rnav ? `the <em>${pad3(S.radial)}</em> degree bearing` : `the <em>${pad3(S.radial)}</em> radial`;
   $('clearance').innerHTML =
-    `${S.call}, hold <em>${dir}</em> of ${fixName} on the <em>${pad3(S.radial)}</em> radial${turns}, ${leg}.`;
+    `${S.call}, hold <em>${dir}</em> of ${fixName} on ${line}${turns}, ${leg}.`;
 
   const now = new Date();
   const efc = new Date(now.getTime() + S.efcMin * 60000);
   const z = d => String(d.getUTCHours()).padStart(2, '0') + String(d.getUTCMinutes()).padStart(2, '0');
-  const bits = [`${S.vor[1]} VOR`, `inbound course ${pad3(inbound())}`, `outbound heading ${pad3(outbound())}`];
-  if (S.fixDme) bits.push(`fix at ${S.fixDme} DME`);
+  const bits = [rnav ? `${S.wpt} waypoint` : `${S.vor[1]} VOR`,
+                `inbound course ${pad3(inbound())}`, `outbound heading ${pad3(outbound())}`];
+  if (!rnav && S.fixDme) bits.push(`fix at ${S.fixDme} DME`);
   bits.push(rnav ? 'RNAV hold — mileage legs need GPS' : 'timed hold — fly the clock');
   bits.push(`EFC ${z(efc)}Z`);
   $('efc').textContent = bits.join('  ·  ');
@@ -914,7 +920,9 @@ function newScenario(randomize) {
        station and timed, with mileage legs only on the RNAV ones. */
     const wantRnav = S.holdType === 'rnav' ||
                      (S.holdType === 'any' && S.eq.g5 && Math.random() < 0.25);
-    S.fixDme = S.fixMode === 'over' ? 0
+    S.wpt = WPTS[Math.floor(Math.random() * WPTS.length)];
+    S.fixDme = wantRnav ? 0                       // the waypoint is the fix
+             : S.fixMode === 'over' ? 0
              : S.fixMode === 'out'  ? clamp(+$('setFixDme').value || 15, 1, 60)
              : (Math.random() < 0.55 ? 0 : 5 + Math.floor(Math.random() * 21));
     const pick = wantRnav ? ['d4', 'd5', 'd10'][Math.floor(Math.random() * 3)]
@@ -1179,7 +1187,7 @@ function drawMap() {
     const lx = 6*Math.sin(rr), ly = 6*Math.cos(rr);
     mctx.fillStyle = '#ffffff'; mctx.font = '11px ui-monospace,monospace';
     mctx.textAlign = 'center'; mctx.textBaseline = 'middle';
-    mctx.fillText('R-' + pad3(S.radial), X({x:lx}), Y({y:ly}) - 10);
+    mctx.fillText((isRnav() ? 'BRG ' : 'R-') + pad3(S.radial), X({x:lx}), Y({y:ly}) - 10);
   }
 
   if (S.show.ideal) {
@@ -1202,17 +1210,28 @@ function drawMap() {
   if (S.show.fix) {
     const px = X({x:0}), py = Y({y:0});
     mctx.strokeStyle = '#ffffff'; mctx.lineWidth = 1.6;
-    mctx.beginPath();
-    for (let i = 0; i < 6; i++) {
-      const a = (i * 60 - 30) * RAD, R = 9;
-      const qx = px + R * Math.cos(a), qy = py + R * Math.sin(a);
-      i ? mctx.lineTo(qx, qy) : mctx.moveTo(qx, qy);
+    if (isRnav()) {                       // a waypoint is a four point star on a chart
+      mctx.beginPath();
+      for (let i = 0; i < 8; i++) {
+        const a = (i * 45 - 90) * RAD, rr = i % 2 ? 3.5 : 10;
+        const qx = px + rr * Math.cos(a), qy = py + rr * Math.sin(a);
+        i ? mctx.lineTo(qx, qy) : mctx.moveTo(qx, qy);
+      }
+      mctx.closePath(); mctx.stroke();
+    } else {
+      mctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const a = (i * 60 - 30) * RAD, R = 9;
+        const qx = px + R * Math.cos(a), qy = py + R * Math.sin(a);
+        i ? mctx.lineTo(qx, qy) : mctx.moveTo(qx, qy);
+      }
+      mctx.closePath(); mctx.stroke();
+      mctx.fillStyle = '#ffffff';
+      mctx.beginPath(); mctx.arc(px, py, 2.2, 0, Math.PI*2); mctx.fill();
     }
-    mctx.closePath(); mctx.stroke();
     mctx.fillStyle = '#ffffff';
-    mctx.beginPath(); mctx.arc(px, py, 2.2, 0, Math.PI*2); mctx.fill();
     mctx.font = '11px ui-monospace,monospace'; mctx.textAlign = 'left'; mctx.textBaseline = 'top';
-    mctx.fillText(S.vor[0], px + 13, py + 5);
+    mctx.fillText(isRnav() ? S.wpt : S.vor[0], px + 13, py + 5);
 
     if (S.fixDme) {                       // holding fix out on the radial
       const fx = X(FX), fy = Y(FX);
@@ -1402,33 +1421,29 @@ function drawCDIHead() {
   c.strokeStyle = '#f4f2ea'; c.lineWidth = F * 0.03;
   c.beginPath(); c.arc(0, 0, F * 0.085, 0, Math.PI * 2); c.stroke();
 
-  // TO / FROM triangles
-  const tri = (al, up) => {
-    if (al < 0.02) return;
-    c.save(); c.globalAlpha = al; c.fillStyle = AMB;
-    const y = up ? -F * 0.50 : F * 0.50, sg = up ? 1 : -1, sz = F * 0.10;
-    c.beginPath();
-    c.moveTo(0, y - sz * sg); c.lineTo(-sz * 0.85, y + sz * 0.55 * sg); c.lineTo(sz * 0.85, y + sz * 0.55 * sg);
-    c.closePath(); c.fill(); c.restore();
-  };
-  tri(clamp((N.tf - 0.18) / 0.35, 0, 1), true);
-  tri(clamp((-N.tf - 0.18) / 0.35, 0, 1), false);
-
-  // NAV / VLOC annunciator window, upper left
+  /* TO / FROM flag window, upper left. A mechanical flag, not a painted arrow:
+     it shows TO or FROM while the sense is good, fades through blank as the
+     signal decays, and the red NAV flag is pulled in over the top of it. */
   c.save();
   c.translate(-F * 0.46, -F * 0.42);
-  c.fillStyle = '#111315'; roundRect(c, -F * 0.20, -F * 0.115, F * 0.40, F * 0.23, F * 0.02); c.fill();
+  c.fillStyle = '#0d0f11'; roundRect(c, -F * 0.23, -F * 0.125, F * 0.46, F * 0.25, F * 0.02); c.fill();
   c.strokeStyle = '#2a2e32'; c.lineWidth = 1; c.stroke();
   c.textAlign = 'center'; c.textBaseline = 'middle';
+
+  const sense = clamp((Math.abs(N.tf) - 0.18) / 0.35, 0, 1) * (1 - clamp(N.flag, 0, 1));
+  if (sense > 0.02) {
+    c.save(); c.globalAlpha = sense;
+    c.fillStyle = AMB; c.font = `700 ${F * 0.135}px ${COND}`;
+    c.fillText(N.tf > 0 ? 'TO' : 'FROM', 0, F * 0.006);
+    c.restore();
+  }
   if (N.flag > 0.02) {                     // red flag pulled in by its spring
     const t = clamp(N.flag, 0, 1);
     c.save(); c.globalAlpha = clamp(t * 1.5, 0, 1);
-    c.translate(0, (1 - t) * -F * 0.26); c.rotate((1 - t) * 0.4);
-    c.fillStyle = '#b8352b'; roundRect(c, -F * 0.19, -F * 0.105, F * 0.38, F * 0.21, F * 0.015); c.fill();
+    c.translate(0, (1 - t) * -F * 0.28); c.rotate((1 - t) * 0.4);
+    c.fillStyle = '#b8352b'; roundRect(c, -F * 0.22, -F * 0.115, F * 0.44, F * 0.23, F * 0.015); c.fill();
     c.fillStyle = '#ffeceb'; c.font = `700 ${F * 0.125}px ${COND}`; c.fillText('NAV', 0, F * 0.006);
     c.restore();
-  } else {
-    c.fillStyle = '#6f767c'; c.font = `600 ${F * 0.10}px ${COND}`; c.fillText('VLOC', 0, F * 0.006);
   }
   c.restore();
 
@@ -1516,7 +1531,9 @@ function drawG5() {
   S.hitG5 = { x: w / 2 + kx, y: h / 2 + ky, r: kr };
 
   // ---- the display itself ----
-  const R = S0 * 0.392, sc = R / 165;
+  /* RD is the glass; R is the compass rose, pulled in a little so the heading
+     window and the corner readouts sit clear of the numbers, not over them. */
+  const RD = S0 * 0.392, R = RD * 0.885, sc = RD / 165;
   const fs = n => `${Math.max(8, n * sc)}px`;
   c.save(); c.translate(w / 2, h / 2 - S0 * 0.065);
 
@@ -1610,33 +1627,33 @@ function drawG5() {
 
   // readouts, kept inside the rose
   c.textBaseline = 'middle';
-  const bw = R * 0.21, bh = R * 0.14;
+  const bw = RD * 0.21, bh = RD * 0.14;
   c.fillStyle = '#000'; c.strokeStyle = '#8a949c'; c.lineWidth = 1.4;
-  roundRect(c, -bw, -R + 2, bw * 2, bh, 2); c.fill(); c.stroke();
+  roundRect(c, -bw, -RD + 1, bw * 2, bh, 2); c.fill(); c.stroke();
   c.fillStyle = '#fff'; c.font = `700 ${fs(17)} ${COND}`;
-  c.textAlign = 'center'; c.fillText(pad3(S.ac.hdg), 0, -R + 2 + bh / 2);
+  c.textAlign = 'center'; c.fillText(pad3(S.ac.hdg), 0, -RD + 1 + bh / 2);
 
   c.font = `600 ${fs(12)} ${COND}`;
   const field = (txt, col, x, align, active) => {
     c.textAlign = align;
-    const wd = c.measureText(txt).width, hgt = R * 0.115;
+    const wd = c.measureText(txt).width, hgt = RD * 0.115;
     if (active) {
-      const bx = align === 'left' ? x - R * 0.03 : x - wd - R * 0.03;
-      c.fillStyle = col; roundRect(c, bx, -R * 0.48 - hgt / 2, wd + R * 0.06, hgt, 2); c.fill();
+      const bx = align === 'left' ? x - RD * 0.03 : x - wd - RD * 0.03;
+      c.fillStyle = col; roundRect(c, bx, -RD * 0.52 - hgt / 2, wd + RD * 0.06, hgt, 2); c.fill();
       c.fillStyle = '#000';
     } else c.fillStyle = col;
-    c.fillText(txt, x, -R * 0.48);
+    c.fillText(txt, x, -RD * 0.52);
   };
-  field('HDG ' + pad3(S.bug), CYN, -R * 0.55, 'left',  S.g5Field === 'hdg');
-  field('CRS ' + pad3(S.obs), SRC,  R * 0.55, 'right', S.g5Field === 'crs');
+  field('HDG ' + pad3(S.bug), CYN, -RD * 0.62, 'left',  S.g5Field === 'hdg');
+  field('CRS ' + pad3(S.obs), SRC,  RD * 0.62, 'right', S.g5Field === 'crs');
   c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = SRC;
-  c.fillText(gps ? `GPS  ${S.gpsScale.toFixed(S.gpsScale < 1 ? 2 : 1)} NM` : 'VOR1', 0, R * 0.72);
+  c.fillText(gps ? `GPS  ${S.gpsScale.toFixed(S.gpsScale < 1 ? 2 : 1)} NM` : 'VOR1', 0, RD * 0.78);
 
   if (!showDev) {
     c.fillStyle = '#151206'; c.strokeStyle = AMB; c.lineWidth = 1.6;
-    roundRect(c, -R * 0.17, -R * 0.30 - R * 0.09, R * 0.34, R * 0.18, 2); c.fill(); c.stroke();
+    roundRect(c, -RD * 0.17, -RD * 0.30 - RD * 0.09, RD * 0.34, RD * 0.18, 2); c.fill(); c.stroke();
     c.fillStyle = AMB; c.font = `700 ${fs(14)} ${COND}`;
-    c.fillText('NAV', 0, -R * 0.30);
+    c.fillText('NAV', 0, -RD * 0.30);
   }
   c.restore();
 }
@@ -2007,7 +2024,9 @@ function syncHsiBtns() {
   const rnav = rnavLocked();
   $('eqCdi').disabled = rnav;
   $('eqCdi').parentElement.style.opacity = rnav ? .4 : 1;
-  $('setFixDme').disabled = S.fixMode === 'over';
+  $('setFixDme').disabled = S.fixMode === 'over' || rnav;
+  $('setFixMode').disabled = rnav;
+  $('setFixMode').title = rnav ? 'An RNAV hold is at the waypoint itself' : '';
   document.querySelectorAll('[data-hsi]').forEach(b => {
     const mech = b.dataset.hsi === 'mech';
     b.disabled = mech && rnav;
@@ -2088,6 +2107,7 @@ const angAbout = (el, e, k) => {
   const r = el.getBoundingClientRect();
   return Math.atan2(e.clientY - r.top - k.y, e.clientX - r.left - k.x) / RAD;
 };
+const capture = (el, id) => { try { if (el.setPointerCapture) el.setPointerCapture(id); } catch (_) {} };
 const overKnob = (el, e, k, slack) => {
   if (!k) return false;
   const r = el.getBoundingClientRect();
@@ -2109,7 +2129,7 @@ hsiCv.addEventListener('pointerdown', e => {
   dragId = e.pointerId;
   onKnob = S.hsiStyle === 'g5' && overKnob(hsiCv, e, S.hitG5);
   dragPrev = onKnob ? angAbout(hsiCv, e, S.hitG5) : angAt(hsiCv, e);
-  dragSpun = 0; hsiCv.setPointerCapture(dragId);
+  dragSpun = 0; capture(hsiCv, dragId);
 });
 hsiCv.addEventListener('pointermove', e => {
   if (e.pointerType === 'mouse')
@@ -2142,7 +2162,7 @@ dgCv.addEventListener('dblclick', e => { if (overKnob(dgCv, e, S.hitHdg, 1.8)) a
 let dgId = null, dgPrev = 0;
 dgCv.addEventListener('pointerdown', e => {
   if (dgId !== null) return;
-  dgId = e.pointerId; dgPrev = angAt(dgCv, e); dgCv.setPointerCapture(dgId);
+  dgId = e.pointerId; dgPrev = angAt(dgCv, e); capture(dgCv, dgId);
 });
 dgCv.addEventListener('pointermove', e => {
   if (e.pointerId !== dgId) return;
@@ -2160,7 +2180,7 @@ apCv.addEventListener('pointerdown', e => {
   }
   if (apId !== null || !overKnob(apCv, e, S.hitApKnob, 1.3)) return;
   apId = e.pointerId; apPrev = angAbout(apCv, e, S.hitApKnob);
-  apCv.setPointerCapture(apId);
+  capture(apCv, apId);
 });
 apCv.addEventListener('pointermove', e => {
   if (e.pointerId !== apId) return;
@@ -2214,7 +2234,7 @@ $('btnHelp').onclick = () => $('help').classList.add('show');
 $('btnApply').onclick = () => {
   S.radial = n360(+$('setRadial').value || 0);
   S.turns = $('setTurns').value;
-  S.fixDme = S.fixMode === 'over' ? 0 : clamp(+$('setFixDme').value || 0, 0, 60);
+  S.fixDme = (S.holdType === 'rnav' || S.fixMode === 'over') ? 0 : clamp(+$('setFixDme').value || 0, 0, 60);
   setLeg($('setLeg').value);
   S.efcMin = 25;
   reposition(); buildClearance();
@@ -2248,7 +2268,7 @@ function holdBtn(el, down, up) {
   el.addEventListener('pointerdown', e => {
     if (id !== null) return;
     id = e.pointerId;
-    e.preventDefault(); el.setPointerCapture(id); el.classList.add('act'); down();
+    e.preventDefault(); capture(el, id); el.classList.add('act'); down();
   });
   const end = e => {
     if (id === null || (e && e.pointerId !== id)) return;
