@@ -71,6 +71,10 @@
   .statusRow{flex:none}
   #apWrap{flex:none;display:none;align-self:center}
   #ap{display:block}
+  #tcWrap{flex:none;display:none}
+  #tc{display:block}
+  #aiWrap{flex:none;display:none}
+  #ai{display:block}
   #mapSlot{display:none;min-width:0}
   #hsi,#dg{display:block}
   #stage .card,#stage .grid4{margin-top:0}
@@ -332,7 +336,9 @@
       <div id="stageBody">
         <div id="instCol">
           <div id="hsiBox"><canvas id="dg"></canvas><canvas id="hsi"></canvas></div>
+          <div id="aiWrap"><canvas id="ai"></canvas></div>
           <div id="apWrap"><canvas id="ap"></canvas></div>
+          <div id="tcWrap"><canvas id="tc"></canvas></div>
           <div class="statusRow">
             <div id="stageStatus"></div>
             <div class="seg">
@@ -405,6 +411,8 @@
       <div class="sect">Equipment fitted</div>
       <div class="setline"><label for="eqCdi">CDI head and directional gyro</label><input type="radio" name="navdisp" id="eqCdi" checked></div>
       <div class="setline"><label for="eqG5">Garmin G5</label><input type="radio" name="navdisp" id="eqG5"></div>
+      <div class="setline"><label for="eqTc">Turn coordinator</label><input type="checkbox" id="eqTc" checked></div>
+      <div class="setline"><label for="eqAi">Attitude indicator</label><input type="checkbox" id="eqAi"></div>
       <div class="setline"><label for="eqAp">Heading autopilot</label><input type="checkbox" id="eqAp"></div>
       <div class="hint">The panel takes one nav display or the other, and this is the same switch as the one above the readouts. Without a G5 the aircraft is not RNAV capable, so ATC will not issue mileage legs.</div>
 
@@ -430,6 +438,9 @@
       <div class="setline"><label>Sim rate</label>
         <select id="setRate"><option value="1">1&times;</option><option value="2">2&times;</option><option value="4">4&times;</option><option value="8">8&times;</option></select></div>
       <div class="setline"><label for="setTouch">Touch controls</label><input type="checkbox" id="setTouch"></div>
+      <div class="setline"><label>Turns</label><select id="setTurnMode">
+        <option value="rate">Constant rate &middot; standard rate, 2 minute turn</option>
+        <option value="radius">Constant radius &middot; wind corrected ground track</option></select></div>
       <div class="setline"><label for="setLatch">Latched turns (tap instead of hold)</label><input type="checkbox" id="setLatch"></div>
       <div class="setline"><label for="setAuto">Auto-start timer at fix &amp; wings level</label><input type="checkbox" id="setAuto"></div>
       <div class="setline"><label for="setCheat">Show entry sector diagram (cheat)</label><input type="checkbox" id="setCheat"></div>
@@ -601,6 +612,19 @@
     <h2>The four scenario buttons</h2>
     <p><b>New random</b> rolls a fresh clearance and a fresh arrival — a completely new problem. <b>Apply fields</b> takes the radial, turns, legs, arrival and forced entry type from the boxes and builds that clearance, then gives you an arrival for it. <b>New arrival</b> keeps the clearance you have and drops you in from somewhere else, which is how you drill one hold from every direction. <b>Restart this one</b> puts you back on the exact heading and position you began with, clock and trail wiped, so you can refly an entry you got wrong and compare.</p>
 
+    <h2>Constant rate against constant radius</h2>
+    <p>A standard rate turn holds the RATE at three degrees a second, so in wind the ground track is blown out of shape: fly a full circle in a twenty five knot wind and you finish nearly a mile from where you started. Constant radius holds the GROUND TRACK circular instead, varying the rate with groundspeed — faster and steeper downwind, slower and shallower upwind — and the circle closes on itself.</p>
+    <p>That is what GPS roll steering does, and it is the reason an RNAV hold keeps its shape in wind while a hand flown one has to be corrected on every leg. Fly the same hold both ways with the breadcrumbs on and the difference is obvious: the constant rate pattern walks downwind, and the constant radius one does not.</p>
+    <p>With the attitude indicator fitted you can watch the bank change round a constant radius turn. At a hundred knots in a twenty five knot wind it runs from about nine degrees upwind to twenty three degrees downwind, against a steady fifteen for a constant rate turn.</p>
+
+    <h2>The attitude indicator</h2>
+    <p>An optional vacuum gyro horizon, off by default. It is driven from the rate of turn rather than being a separate model, because in a coordinated turn the two are the same thing: the tangent of the bank equals the true airspeed times the rate of turn divided by gravity. That works out at about fifteen degrees at a hundred knots and standard rate, which is where the rule of thumb of a tenth of your airspeed plus seven comes from.</p>
+    <p>The horizon stays level, and the pitch ladder never moves off zero. That is not an omission: this simulation has no vertical dimension, and an attitude indicator that invented one would teach you to look at something that is not there. What it is genuinely useful for is establishing the bank quickly and holding it steady, which is the other half of flying an accurate leg.</p>
+
+    <h2>The turn coordinator</h2>
+    <p>Fitted by default, and it is the instrument you would actually be looking at to set up a turn. The little aeroplane banks in proportion to the rate of turn, not the angle of bank, so putting a wing tip on the doghouse is a standard rate turn whatever your airspeed — three degrees a second, a full circle in the two minutes printed on the dial, and half a turn in one. That is the whole basis of the timing in a hold.</p>
+    <p>The ball underneath is a real inclinometer, not decoration. It swings out while you are rolling into or out of a bank, because the roll is not yet matched by the turn, then settles back to centre once the turn is established. It says NO PITCH INFORMATION on the face for the same reason the real one does: this instrument tells you nothing about whether you are climbing or descending.</p>
+
     <h2>Choosing what you practise</h2>
     <p>Two menus in the panel decide what ATC hands you. <b>Hold type</b> is either a VOR hold on the clock or an RNAV hold on mileage legs, or left mixed. Pick RNAV and the steam gauges grey out in both places they appear, in the equipment list and on the selector above the readouts, because a mechanical CDI has no way to measure a leg in miles. The leg lengths on offer follow the same rule, so you cannot end up with a combination that could not be flown.</p>
     <p><b>Hold fix</b> is either overhead the station or out along the radial at a distance you set, or mixed. Out on the radial is the case a controller gives you when they say to hold fifteen miles out: the DME window still reads to the station, so that is how you find the fix, and you never touch the cone of confusion the whole lap.</p>
@@ -704,12 +728,13 @@ const S = {
   vor: VORS[0], call: CALLS[0],
   radial: 217, turns: 'right', legSec: 60, legNm: 0, fixDme: 0, wpt: 'CHOWW',
   obs: 37, bug: 0, alt: 4000, coneAng: 30, hsiStyle: 'mech', gpsScale: 1.0, holdType: 'any', fixMode: 'any',
-  eq: { cdi: true, g5: false, ap: false },
+  eq: { cdi: true, g5: false, ap: false, tc: true, ai: false },
+  ball: 0,
   ap: { on: false, hdg: 0, knob: 0, togo: 0 }, gyroDrift: 0, gyroErr: 0, startState: null,
   prompting: false, g5Field: 'hdg', knobAngle: 0, hitG5: null, hitObs: null, hitHdg: null,
   nav: { pos: 0, vel: 0, tf: -1, flag: 0, valid: 1, brg: 0, n1: 0, n2: 0, n3: 0, n1t: 0, n2t: 0, n3t: 0, nT: 0 },
   wind: { dir: 0, spd: 0 },
-  rate: 1, paused: false, ff: false, ffMult: 8,
+  rate: 1, paused: false, ff: false, ffMult: 8, turnMode: 'rate',
   startMode: 'direct', forceEntry: 'any', randWind: false,
   timer: { t: 0, run: false },
   crumbs: [], crumbAcc: 0,
@@ -734,6 +759,30 @@ const fixDist = () => { const F = fixPos(); return Math.hypot(S.ac.x - F.x, S.ac
 const isRnav = () => !!S.legNm;
 const rnavLocked = () => S.holdType === 'rnav' || isRnav();   // greys the steam gauges out
 const navSrc = () => isRnav() ? 'gps' : 'vloc';
+/* Standard rate keeps the RATE constant, so in wind the ground track is blown
+   out of shape and a full circle does not close. Constant radius keeps the
+   GROUND TRACK circular instead, varying the rate with groundspeed — faster and
+   steeper downwind, slower and shallower upwind. That is what GPS roll steering
+   does, and it is why an RNAV hold keeps its shape in wind while a hand flown
+   one has to be corrected.
+
+   For a circular ground track the track angle must sweep at GS/r. With
+   g = Vair + W and the heading turning at omega, dtheta/dt = omega V (g.u)/|g|^2,
+   so the heading rate needed is omega = (GS/r) |g|^2 / (V (g.u)). */
+function requiredTurnRate() {
+  if (S.turnMode !== 'radius') return 3;
+  const V = S.ac.tas / 3600;
+  if (V <= 0) return 3;
+  const u = { x: Math.sin(S.ac.hdg * RAD), y: Math.cos(S.ac.hdg * RAD) };
+  const g = gsVec();
+  const gs = Math.hypot(g.x, g.y);
+  const dot = g.x * u.x + g.y * u.y;
+  if (Math.abs(dot) < 1e-9) return 3;
+  const r = turnRadius();                       // still air standard rate radius
+  const trackRate = (gs / r) / RAD;             // deg/sec of ground track
+  return clamp(trackRate * (gs * gs) / (V * dot), 0.5, 8);
+}
+
 const dgHdg = () => S.hsiStyle === 'mech' ? n360(S.ac.hdg + S.gyroErr) : S.ac.hdg;
 const inbound = () => n360(S.radial + 180);
 const outbound = () => n360(S.radial);
@@ -1025,8 +1074,8 @@ function step(dt) {
   /* Commanded from the turn still to go, not from the shortest way round, so
      winding the knob left through 270 flies a left 270 rather than a right 90. */
   if (S.eq.ap && S.ap.on) S.turnCmd = clamp(S.ap.togo / 12, -1, 1);
-  // roll in / roll out toward standard rate
-  const target = S.turnCmd * 3;
+  // roll in / roll out toward the commanded rate
+  const target = S.turnCmd * requiredTurnRate();
   const rollRate = 3.5;
   if (S.ac.turn < target) S.ac.turn = Math.min(target, S.ac.turn + rollRate * dt);
   else S.ac.turn = Math.max(target, S.ac.turn - rollRate * dt);
@@ -1041,6 +1090,13 @@ function step(dt) {
 
   const g = gsVec();
   S.ac.x += g.x * dt; S.ac.y += g.y * dt;
+
+  /* The ball. A coordinated turn keeps it centred; it swings out briefly while
+     the bank is being changed, since the roll is not yet matched by the turn. */
+  const rollAcc = (S.ac.turn - (S.prevTurn === undefined ? S.ac.turn : S.prevTurn)) / Math.max(dt, 1e-4);
+  S.prevTurn = S.ac.turn;
+  const ballTgt = clamp(-rollAcc * 0.13, -1.6, 1.6);
+  S.ball += (ballTgt - S.ball) * Math.min(1, dt * 3.2);
 
   if (S.hsiStyle === 'mech' && S.gyroDrift) S.gyroErr += S.gyroDrift / 3600 * dt;
   updNav(dt);
@@ -1091,6 +1147,8 @@ function onCross() {
 const mapCv = $('map'), mctx = mapCv.getContext('2d');
 const hsiCv = $('hsi'), hctx = hsiCv.getContext('2d');
 const dgCv  = $('dg'),  dctx = dgCv.getContext('2d');
+const tcCv  = $('tc'),  tctx = tcCv.getContext('2d');
+const aiCv  = $('ai'),  aictx = aiCv.getContext('2d');
 const apCv  = $('ap'),  actx = apCv.getContext('2d');
 const secCv = $('sector'), sctx = secCv.getContext('2d');
 
@@ -1487,7 +1545,7 @@ function drawDG() {
 
   // fixed lubber line and aircraft symbol
   c.fillStyle = '#f2f0e8';
-  c.beginPath(); c.moveTo(0, -F * 1.0); c.lineTo(-F * 0.075, -F * 0.885); c.lineTo(F * 0.075, -F * 0.885);
+  c.beginPath(); c.moveTo(0, -F * 0.885); c.lineTo(-F * 0.075, -F * 1.0); c.lineTo(F * 0.075, -F * 1.0);
   c.closePath(); c.fill();
   c.strokeStyle = '#f2f0e8'; c.lineWidth = F * 0.045; c.lineCap = 'round';
   c.beginPath();
@@ -1599,8 +1657,10 @@ function drawG5() {
   }
   c.restore();                                   // end card rotation
 
+  /* Heading index: a triangle pointing DOWN at the card, the way a real HSI
+     marks the lubber line. Pointing up put its apex inside the heading window. */
   c.fillStyle = '#fff';
-  c.beginPath(); c.moveTo(0, -R + 2); c.lineTo(-7, -R + 15); c.lineTo(7, -R + 15);
+  c.beginPath(); c.moveTo(0, -R + 15); c.lineTo(-7, -R + 2); c.lineTo(7, -R + 2);
   c.closePath(); c.fill();
 
   /* Track bug. Where the aeroplane is actually going once the wind has had its
@@ -1764,21 +1824,234 @@ function drawAP() {
   S.hitApKnob = { x: kx, y: ky, r: kr };
 }
 
+/* ---------------- attitude indicator ---------------- */
+/* A vacuum gyro horizon. In a coordinated turn the bank follows from the rate:
+   tan(bank) = V x omega / g, which is about 15 degrees at 100 kt and standard
+   rate. There is no pitch in this simulation, so the horizon stays level. */
+function bankAngle() {
+  const V = S.ac.tas * 1.68781;                 // ft/s
+  const w = S.ac.turn * RAD;                    // rad/s
+  return Math.atan(V * w / 32.174) / RAD;
+}
+
+function drawAI() {
+  if (!S.eq.ai) return;
+  const f = fit(aiCv, aictx); if (!f.ok) return;
+  const { w, h } = f, c = aictx;
+  c.clearRect(0, 0, w, h);
+  const S0 = Math.min(w, h), F = S0 * 0.385;
+  c.save(); c.translate(w / 2, h / 2);
+  caseAndFace(c, S0, F);
+
+  const bank = bankAngle();
+  const pitch = 0;                              // no pitch information here
+  const pxPerDeg = F / 25;
+
+  /* the moving card: sky, ground and the pitch ladder, clipped to the glass */
+  c.save();
+  c.beginPath(); c.arc(0, 0, F * 0.90, 0, Math.PI * 2); c.clip();
+  c.rotate(-bank * RAD);
+  c.translate(0, pitch * pxPerDeg);
+
+  const far = F * 3;
+  const sky = c.createLinearGradient(0, -far, 0, 0);
+  sky.addColorStop(0, '#1d5f96'); sky.addColorStop(1, '#3f8fc4');
+  c.fillStyle = sky; c.fillRect(-far, -far, far * 2, far);
+
+  const ground = c.createLinearGradient(0, 0, 0, far);
+  ground.addColorStop(0, '#8a5a2b'); ground.addColorStop(1, '#4d3117');
+  c.fillStyle = ground; c.fillRect(-far, 0, far * 2, far);
+
+  c.strokeStyle = '#f2f0e8'; c.lineWidth = Math.max(1.4, F * 0.018);
+  c.beginPath(); c.moveTo(-far, 0); c.lineTo(far, 0); c.stroke();
+
+  // pitch ladder, long bars every ten degrees and short ones between
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  for (let d = -30; d <= 30; d += 5) {
+    if (d === 0) continue;
+    const y = -d * pxPerDeg;
+    const long = d % 10 === 0;
+    const half = long ? F * 0.28 : F * 0.14;
+    c.lineWidth = long ? 2 : 1.4;
+    c.beginPath(); c.moveTo(-half, y); c.lineTo(half, y); c.stroke();
+    if (long) {
+      c.fillStyle = '#f2f0e8'; c.font = `600 ${F * 0.085}px ${COND}`;
+      c.fillText(String(Math.abs(d)), -half - F * 0.075, y);
+      c.fillText(String(Math.abs(d)),  half + F * 0.075, y);
+    }
+  }
+  c.restore();
+
+  /* bank scale, fixed to the case */
+  c.strokeStyle = '#f2f0e8'; c.fillStyle = '#f2f0e8';
+  for (const a of [-60, -45, -30, -20, -10, 10, 20, 30, 45, 60]) {
+    const major = Math.abs(a) % 30 === 0 || Math.abs(a) === 45;
+    const r1 = F * 0.90, r2 = F * (major ? 0.78 : 0.84);
+    const t = (a - 90) * RAD;
+    c.lineWidth = major ? 2 : 1.2;
+    c.beginPath();
+    c.moveTo(r1 * Math.cos(t), r1 * Math.sin(t));
+    c.lineTo(r2 * Math.cos(t), r2 * Math.sin(t));
+    c.stroke();
+  }
+  // the zero mark at the top
+  c.beginPath();
+  c.moveTo(0, -F * 0.90); c.lineTo(-F * 0.055, -F * 0.78); c.lineTo(F * 0.055, -F * 0.78);
+  c.closePath(); c.fill();
+
+  /* the bank pointer, riding the scale */
+  c.save(); c.rotate(-bank * RAD);
+  c.fillStyle = '#f0c243';
+  c.beginPath();
+  c.moveTo(0, -F * 0.755); c.lineTo(-F * 0.05, -F * 0.645); c.lineTo(F * 0.05, -F * 0.645);
+  c.closePath(); c.fill();
+  c.restore();
+
+  /* fixed aeroplane: wings, centre dot and the little vertical stub */
+  c.strokeStyle = '#f0c243'; c.lineWidth = F * 0.05; c.lineCap = 'butt';
+  c.beginPath();
+  c.moveTo(-F * 0.52, 0); c.lineTo(-F * 0.18, 0);
+  c.moveTo( F * 0.18, 0); c.lineTo( F * 0.52, 0);
+  c.stroke();
+  c.beginPath();
+  c.moveTo(-F * 0.52, 0); c.lineTo(-F * 0.52, F * 0.09);
+  c.moveTo( F * 0.52, 0); c.lineTo( F * 0.52, F * 0.09);
+  c.stroke();
+  c.fillStyle = '#f0c243';
+  c.beginPath(); c.arc(0, 0, F * 0.038, 0, Math.PI * 2); c.fill();
+
+  c.fillStyle = '#8d949a'; c.font = `600 ${F * 0.085}px ${COND}`;
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText('ATTITUDE', 0, F * 0.70);
+
+  knob(c, -S0 * 0.385, S0 * 0.385, S0 * 0.062, 'ADJ');
+  c.restore();
+}
+
+/* ---------------- turn coordinator ---------------- */
+function drawTC() {
+  if (!S.eq.tc) return;
+  const f = fit(tcCv, tctx); if (!f.ok) return;
+  const { w, h } = f, c = tctx;
+  c.clearRect(0, 0, w, h);
+  const S0 = Math.min(w, h), F = S0 * 0.385;
+  c.save(); c.translate(w / 2, h / 2);
+  caseAndFace(c, S0, F);
+
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillStyle = '#d8d6cf';
+  c.font = `600 ${F * 0.105}px ${COND}`;
+  c.fillText('D.C.',  0, -F * 0.78);
+  c.fillText('ELEC.', 0, -F * 0.64);
+
+  /* Index marks sit where a wing tip lands. Rotation is clockwise from the top,
+     so wings level is 9 and 3 o'clock, and the standard rate doghouses are a
+     further 30 degrees round at 8 and 4 o'clock — outboard and below. */
+  const STD = 30;
+  const mark = (rot, long) => {
+    c.save(); c.rotate(rot * RAD);
+    c.fillStyle = '#f2f0e8';
+    c.fillRect(-F * 0.055, -F * 0.86, F * 0.11, F * (long ? 0.115 : 0.085));
+    c.restore();
+  };
+  mark(-90, 1); mark(90, 1);                    // wings level
+  mark(-(90 + STD), 0); mark(90 + STD, 0);      // standard rate
+
+  c.fillStyle = '#f2f0e8'; c.font = `700 ${F * 0.155}px ${COND}`;
+  c.fillText('L', -F * 0.73, F * 0.40);
+  c.fillText('R',  F * 0.73, F * 0.40);
+
+  /* Aeroplane symbol. It banks in proportion to the rate of turn, so the wing
+     tip on the doghouse is a standard rate turn whatever the airspeed. */
+  const bank = clamp(S.ac.turn / 3, -1.9, 1.9) * STD;
+  c.save(); c.rotate(bank * RAD);
+  c.fillStyle = '#f4f2ea';
+  c.beginPath();                                   // wings
+  c.moveTo(-F * 0.80, -F * 0.055); c.lineTo(F * 0.80, -F * 0.055);
+  c.lineTo(F * 0.80,  F * 0.020); c.lineTo(-F * 0.80, F * 0.020);
+  c.closePath(); c.fill();
+  c.beginPath();                                   // fuselage and fin
+  c.moveTo(-F * 0.035, -F * 0.34); c.lineTo(F * 0.035, -F * 0.34);
+  c.lineTo(F * 0.035,  F * 0.10); c.lineTo(-F * 0.035, F * 0.10);
+  c.closePath(); c.fill();
+  c.beginPath();                                   // tailplane
+  c.moveTo(-F * 0.22, -F * 0.30); c.lineTo(F * 0.22, -F * 0.30);
+  c.lineTo(F * 0.22, -F * 0.24); c.lineTo(-F * 0.22, -F * 0.24);
+  c.closePath(); c.fill();
+  c.fillStyle = '#e8e6df';
+  c.beginPath(); c.arc(0, 0, F * 0.085, 0, Math.PI * 2); c.fill();
+  c.restore();
+
+  c.fillStyle = '#e8e6df'; c.font = `600 ${F * 0.115}px ${COND}`;
+  c.fillText('TURN COORDINATOR', 0, F * 0.24);
+
+  // ---- inclinometer: curved glass tube with a black ball ----
+  const tubeR = F * 1.34, halfArc = 0.30;
+  const tubeTop = F * 0.42 - tubeR;                // centre of the tube arc
+  c.save();
+  c.lineWidth = F * 0.20; c.lineCap = 'butt';
+  c.strokeStyle = '#e9e6d5';
+  c.beginPath();
+  c.arc(0, tubeTop, tubeR, Math.PI / 2 - halfArc, Math.PI / 2 + halfArc);
+  c.stroke();
+  c.restore();
+  const ballA = Math.PI / 2 + clamp(S.ball, -1, 1) * halfArc * 0.86;
+  const bx = tubeR * Math.cos(ballA), by = tubeTop + tubeR * Math.sin(ballA);
+
+  // the two reference wires either side of centre
+  c.strokeStyle = '#1d1f21'; c.lineWidth = Math.max(1.2, F * 0.018);
+  for (const sg of [-1, 1]) {
+    const a = Math.PI / 2 + sg * 0.052;
+    c.beginPath();
+    c.moveTo((tubeR - F * 0.10) * Math.cos(a), tubeTop + (tubeR - F * 0.10) * Math.sin(a));
+    c.lineTo((tubeR + F * 0.10) * Math.cos(a), tubeTop + (tubeR + F * 0.10) * Math.sin(a));
+    c.stroke();
+  }
+  const bg = c.createRadialGradient(bx - F * 0.02, by - F * 0.03, F * 0.01, bx, by, F * 0.085);
+  bg.addColorStop(0, '#4a4d50'); bg.addColorStop(1, '#0a0b0c');
+  c.fillStyle = bg;
+  c.beginPath(); c.arc(bx, by, F * 0.078, 0, Math.PI * 2); c.fill();
+
+  c.fillStyle = '#e8e6df'; c.font = `700 ${F * 0.125}px ${COND}`;
+  c.fillText('2 MIN.', 0, F * 0.70);
+  c.fillStyle = '#8d949a'; c.font = `600 ${F * 0.085}px ${COND}`;
+  c.fillText('NO PITCH', 0, F * 0.86);
+  c.fillText('INFORMATION', 0, F * 0.96);
+
+  c.restore();
+}
+
 /* ---------------- dispatcher ---------------- */
 function layoutInstruments() {
   const box = $('hsiBox').getBoundingClientRect();
   const mech = S.hsiStyle === 'mech', gapPx = 16;
   let main;
+  const each = mech ? 0.72 : 0.62;
+  const extra = (S.eq.tc ? each : 0) + (S.eq.ai ? each : 0);
   if (mech) {
-    main = Math.max(80, Math.min(box.height, (box.width - gapPx) / 1.72));
+    main = Math.max(80, Math.min(box.height, (box.width - gapPx * 2) / (1.72 + extra)));
     const d = main * 0.72;
     dgCv.style.display = 'block';
     dgCv.style.width = dgCv.style.height = Math.round(d) + 'px';
   } else {
-    main = Math.max(80, Math.min(box.height, box.width));
+    main = Math.max(80, Math.min(box.height, (box.width - (extra ? gapPx : 0)) / (1 + extra)));
     dgCv.style.display = 'none';
   }
   hsiCv.style.width = hsiCv.style.height = Math.round(main) + 'px';
+
+  const aiw = $('aiWrap');
+  if (S.eq.ai) {
+    aiw.style.display = 'block';
+    const d = Math.round(main * (S.hsiStyle === 'mech' ? 0.72 : 0.62));
+    aiCv.style.width = aiCv.style.height = d + 'px';
+  } else aiw.style.display = 'none';
+
+  const tcw = $('tcWrap');
+  if (S.eq.tc) {
+    tcw.style.display = 'block';
+    const d = Math.round(main * (S.hsiStyle === 'mech' ? 0.72 : 0.62));
+    tcCv.style.width = tcCv.style.height = d + 'px';
+  } else tcw.style.display = 'none';
 
   const apw = $('apWrap');
   if (S.eq.ap) {
@@ -1793,7 +2066,7 @@ function drawHSI() {
   layoutInstruments();
   if (S.hsiStyle === 'g5') drawG5();
   else { drawCDIHead(); drawDG(); }
-  drawAP();
+  drawAP(); drawTC(); drawAI();
 }
 
 /* ============================ entry sector diagram ============================ */
@@ -1867,6 +2140,10 @@ function draw() {
              : S.ff ? `<span style="color:#46c98b">FAST FWD ${S.ffMult}&times;</span>` : '';
   $('stageStatus').innerHTML =
     `<span>GS ${Math.round(gs)} KT</span><span>TAS ${Math.round(S.ac.tas)} KT</span>` +
+    (Math.abs(S.ac.turn) > 0.15
+      ? `<span>${S.ac.turn > 0 ? 'R' : 'L'} ${Math.abs(S.ac.turn).toFixed(1)}&deg;/s`
+        + `${S.eq.ai ? ' · ' + Math.abs(bankAngle()).toFixed(0) + '&deg; bank' : ''}</span>`
+      : '') +
     (S.wind.spd ? `<span>WIND ${pad3(S.wind.dir)}/${S.wind.spd}</span>` : '') +
     (S.hsiStyle === 'g5' && navSrc() === 'gps'
       ? `<span>XTK ${Math.abs(gpsDev().xtk).toFixed(2)} NM ${gpsDev().xtk >= 0 ? 'R' : 'L'}</span>` : '') + flag;
@@ -2218,6 +2495,9 @@ $('btnAlign').onclick  = () => alignDG();
 $('eqCdi').onchange    = () => setNavDisplay('mech');
 $('eqG5').onchange     = () => setNavDisplay('g5');
 $('eqAp').onchange     = e => setEquip('ap', e.target.checked);
+$('eqTc').onchange     = e => setEquip('tc', e.target.checked);
+$('eqAi').onchange     = e => setEquip('ai', e.target.checked);
+$('setTurnMode').onchange = e => S.turnMode = e.target.value;
 $('setRate').onchange = e => S.rate = +e.target.value;
 $('setFF').onchange   = e => S.ffMult = +e.target.value;
 $('setStart').onchange= e => { S.startMode = e.target.value; };
