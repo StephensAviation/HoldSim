@@ -67,16 +67,16 @@
   #sideCol{flex:0 1 auto;min-height:0;min-width:0;overflow-y:auto;overflow-x:hidden;
     display:flex;flex-direction:column;gap:9px}
   #hsiBox{flex:1 1 0;min-height:80px;min-width:0;overflow:hidden;
-    display:flex;align-items:center;justify-content:center;gap:16px}
+    display:flex;flex-wrap:wrap;align-items:center;align-content:center;
+    justify-content:center;gap:10px}
   .statusRow{flex:none}
   #apWrap{flex:none;display:none;align-self:center}
   #ap{display:block}
-  #tcWrap{flex:none;display:none}
-  #tc{display:block}
-  #aiWrap{flex:none;display:none}
-  #ai{display:block}
+  #tc{display:none}
+  #ai{display:none}
   #mapSlot{display:none;min-width:0}
   #hsi,#dg{display:block}
+  #hsiBox canvas{flex:none}
   #stage .card,#stage .grid4{margin-top:0}
   .statusRow{display:flex;align-items:center;gap:12px}
   #stageStatus{flex:1;display:flex;gap:18px;flex-wrap:wrap;font-family:var(--mono);font-size:11px;
@@ -335,10 +335,13 @@
 
       <div id="stageBody">
         <div id="instCol">
-          <div id="hsiBox"><canvas id="dg"></canvas><canvas id="hsi"></canvas></div>
-          <div id="aiWrap"><canvas id="ai"></canvas></div>
+          <div id="hsiBox">
+            <canvas id="ai"></canvas>
+            <canvas id="hsi"></canvas>
+            <canvas id="dg"></canvas>
+            <canvas id="tc"></canvas>
+          </div>
           <div id="apWrap"><canvas id="ap"></canvas></div>
-          <div id="tcWrap"><canvas id="tc"></canvas></div>
           <div class="statusRow">
             <div id="stageStatus"></div>
             <div class="seg">
@@ -2022,36 +2025,39 @@ function drawTC() {
 }
 
 /* ---------------- dispatcher ---------------- */
+/* Instruments are square, so the best arrangement depends on the shape of the
+   space. Try every column count and take whichever makes the faces biggest: a
+   single row wastes most of the height, and with four fitted a 2x2 grid is
+   nearly half as large again. */
 function layoutInstruments() {
   const box = $('hsiBox').getBoundingClientRect();
-  const mech = S.hsiStyle === 'mech', gapPx = 16;
-  let main;
-  const each = mech ? 0.72 : 0.62;
-  const extra = (S.eq.tc ? each : 0) + (S.eq.ai ? each : 0);
-  if (mech) {
-    main = Math.max(80, Math.min(box.height, (box.width - gapPx * 2) / (1.72 + extra)));
-    const d = main * 0.72;
-    dgCv.style.display = 'block';
-    dgCv.style.width = dgCv.style.height = Math.round(d) + 'px';
-  } else {
-    main = Math.max(80, Math.min(box.height, (box.width - (extra ? gapPx : 0)) / (1 + extra)));
-    dgCv.style.display = 'none';
+  const gap = 10;
+  const mech = S.hsiStyle === 'mech';
+
+  // in DOM order, so the grid fills left to right, top to bottom
+  const faces = [
+    [aiCv, S.eq.ai],
+    [hsiCv, true],                 // the CDI head or the G5, always fitted
+    [dgCv, mech],
+    [tcCv, S.eq.tc]
+  ];
+  const shown = faces.filter(f => f[1]);
+  faces.forEach(([cv, on]) => { cv.style.display = on ? 'block' : 'none'; });
+
+  const n = shown.length;
+  let best = 0, bestCols = n;
+  for (let cols = 1; cols <= n; cols++) {
+    const rows = Math.ceil(n / cols);
+    const w = (box.width - gap * (cols - 1)) / cols;
+    const h = (box.height - gap * (rows - 1)) / rows;
+    const side = Math.max(0, Math.min(w, h));
+    if (side > best) { best = side; bestCols = cols; }
   }
-  hsiCv.style.width = hsiCv.style.height = Math.round(main) + 'px';
+  const size = Math.max(80, Math.round(best));
+  shown.forEach(([cv]) => { cv.style.width = cv.style.height = size + 'px'; });
 
-  const aiw = $('aiWrap');
-  if (S.eq.ai) {
-    aiw.style.display = 'block';
-    const d = Math.round(main * (S.hsiStyle === 'mech' ? 0.72 : 0.62));
-    aiCv.style.width = aiCv.style.height = d + 'px';
-  } else aiw.style.display = 'none';
-
-  const tcw = $('tcWrap');
-  if (S.eq.tc) {
-    tcw.style.display = 'block';
-    const d = Math.round(main * (S.hsiStyle === 'mech' ? 0.72 : 0.62));
-    tcCv.style.width = tcCv.style.height = d + 'px';
-  } else tcw.style.display = 'none';
+  // keep the wrap where we want it rather than wherever the width happens to fall
+  $('hsiBox').style.maxWidth = (bestCols * size + (bestCols - 1) * gap) + 'px';
 
   const apw = $('apWrap');
   if (S.eq.ap) {
@@ -2062,6 +2068,7 @@ function layoutInstruments() {
     apCv.style.height = Math.round(aw / 3.5) + 'px';
   } else apw.style.display = 'none';
 }
+
 function drawHSI() {
   layoutInstruments();
   if (S.hsiStyle === 'g5') drawG5();
