@@ -2030,7 +2030,15 @@ function drawTC() {
    single row wastes most of the height, and with four fitted a 2x2 grid is
    nearly half as large again. */
 function layoutInstruments() {
-  const box = $('hsiBox').getBoundingClientRect();
+  /* Measure the space from the column, not from the box: we cap the box's own
+     width below, and reading that back would feed our own answer into the next
+     frame's calculation. */
+  const boxEl = $('hsiBox');
+  const colRect = $('instCol').getBoundingClientRect();
+  const boxRect = boxEl.getBoundingClientRect();
+  const availW = Math.max(80, colRect.width - 2);
+  const availH = Math.max(80, boxRect.height);
+  if (!isFinite(availW) || !isFinite(availH)) return;
   const gap = 10;
   const mech = S.hsiStyle === 'mech';
 
@@ -2048,16 +2056,16 @@ function layoutInstruments() {
   let best = 0, bestCols = n;
   for (let cols = 1; cols <= n; cols++) {
     const rows = Math.ceil(n / cols);
-    const w = (box.width - gap * (cols - 1)) / cols;
-    const h = (box.height - gap * (rows - 1)) / rows;
+    const w = (availW - gap * (cols - 1)) / cols;
+    const h = (availH - gap * (rows - 1)) / rows;
     const side = Math.max(0, Math.min(w, h));
     if (side > best) { best = side; bestCols = cols; }
   }
-  const size = Math.max(80, Math.round(best));
+  const size = Math.max(60, Math.round(best));
   shown.forEach(([cv]) => { cv.style.width = cv.style.height = size + 'px'; });
 
-  // keep the wrap where we want it rather than wherever the width happens to fall
-  $('hsiBox').style.maxWidth = (bestCols * size + (bestCols - 1) * gap) + 'px';
+  // pin the wrap point, or flex decides it from whatever width is going spare
+  boxEl.style.maxWidth = (bestCols * size + (bestCols - 1) * gap) + 'px';
 
   const apw = $('apWrap');
   if (S.eq.ap) {
