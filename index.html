@@ -615,6 +615,11 @@
     <h2>The four scenario buttons</h2>
     <p><b>New random</b> rolls a fresh clearance and a fresh arrival — a completely new problem. <b>Apply fields</b> takes the radial, turns, legs, arrival and forced entry type from the boxes and builds that clearance, then gives you an arrival for it. <b>New arrival</b> keeps the clearance you have and drops you in from somewhere else, which is how you drill one hold from every direction. <b>Restart this one</b> puts you back on the exact heading and position you began with, clock and trail wiped, so you can refly an entry you got wrong and compare.</p>
 
+    <h2>How you get to a DME fix</h2>
+    <p>A DME fix is a point on a radial, and that radial is how you reach it. Nobody can navigate to fifteen miles out on the three zero five radial while tracking the one seven eight without solving a triangle in their head, so ATC does not ask: you are already on that radial, and you fly it until the DME comes up.</p>
+    <p>That means a hold at a DME fix gives you one of two arrivals, not a random one. Tracking inbound toward the station you cross the fix and the pattern is behind you, which is a direct entry. Tracking outbound from the station you arrive at the fix having come from the other side, which puts you a hundred and eighty degrees from the inbound course and gives you a teardrop or a parallel depending on which way your tracking error happens to lie. The pattern itself can be beyond the fix or between the fix and the station, and the compass point in the clearance tells you which.</p>
+    <p>Holds overhead the station are different, because you can be vectored to a VOR from any direction at all, so those still come at you from anywhere. The same goes for an RNAV waypoint, which you can go direct to from wherever you are.</p>
+
     <h2>Constant rate against constant radius</h2>
     <p>A standard rate turn holds the RATE at three degrees a second, so in wind the ground track is blown out of shape: fly a full circle in a twenty five knot wind and you finish nearly a mile from where you started. Constant radius holds the GROUND TRACK circular instead, varying the rate with groundspeed — faster and steeper downwind, slower and shallower upwind — and the circle closes on itself.</p>
     <p>That is what GPS roll steering does, and it is the reason an RNAV hold keeps its shape in wind while a hand flown one has to be corrected on every leg. Fly the same hold both ways with the breadcrumbs on and the difference is obvious: the constant rate pattern walks downwind, and the constant radius one does not.</p>
@@ -729,7 +734,7 @@ const S = {
   ac: { x: 0, y: -12, hdg: 0, tas: 100, turn: 0 },
   turnCmd: 0, latch: 0,
   vor: VORS[0], call: CALLS[0],
-  radial: 217, turns: 'right', legSec: 60, legNm: 0, fixDme: 0, wpt: 'CHOWW',
+  radial: 217, turns: 'right', legSec: 60, legNm: 0, fixDme: 0, fixRadial: 217, wpt: 'CHOWW',
   obs: 37, bug: 0, alt: 4000, coneAng: 30, hsiStyle: 'mech', gpsScale: 1.0, holdType: 'any', fixMode: 'any',
   eq: { cdi: true, g5: false, ap: false, tc: true, ai: false },
   ball: 0,
@@ -754,7 +759,12 @@ const S = {
 /* The holding fix is either the station itself or a point out along the radial.
    DME always reads to the VOR; the pattern, the crossings and the map all key
    off the fix. Both sit on the same radial line, so course geometry is shared. */
-const fixPos = () => ({ x: S.fixDme * Math.sin(S.radial * RAD), y: S.fixDme * Math.cos(S.radial * RAD) });
+/* A DME fix sits on a radial, and that radial is how you get to it. It is not
+   the same thing as the direction the pattern lies: the hold can be beyond the
+   fix or between the fix and the station, so S.radial (the outbound heading) is
+   either S.fixRadial or its reciprocal. */
+const fixPos = () => ({ x: S.fixDme * Math.sin(S.fixRadial * RAD),
+                        y: S.fixDme * Math.cos(S.fixRadial * RAD) });
 const fixDist = () => { const F = fixPos(); return Math.hypot(S.ac.x - F.x, S.ac.y - F.y); };
 /* Mileage legs mean an RNAV hold, which can only be flown on GPS. Everything
    else is a conventional VOR hold and belongs on the green needle. The pilot
@@ -946,7 +956,9 @@ function buildClearance() {
   const fixName = rnav ? `<em>${S.wpt}</em>`
                 : S.fixDme ? `the ${S.vor[0]} <em>${S.fixDme} DME fix</em>`
                 : `the ${S.vor[0]} VOR`;
-  const line = rnav ? `the <em>${pad3(S.radial)}</em> degree bearing` : `the <em>${pad3(S.radial)}</em> radial`;
+  const onRadial = S.fixDme ? S.fixRadial : S.radial;
+  const line = rnav ? `the <em>${pad3(S.radial)}</em> degree bearing`
+                    : `the <em>${pad3(onRadial)}</em> radial`;
   $('clearance').innerHTML =
     `${S.call}, hold <em>${dir}</em> of ${fixName} on ${line}${turns}, ${leg}.`;
 
@@ -955,7 +967,7 @@ function buildClearance() {
   const z = d => String(d.getUTCHours()).padStart(2, '0') + String(d.getUTCMinutes()).padStart(2, '0');
   const bits = [rnav ? `${S.wpt} waypoint` : `${S.vor[1]} VOR`,
                 `inbound course ${pad3(inbound())}`, `outbound heading ${pad3(outbound())}`];
-  if (!rnav && S.fixDme) bits.push(`fix at ${S.fixDme} DME`);
+  if (!rnav && S.fixDme) bits.push(`fix at ${S.fixDme} DME on R-${pad3(S.fixRadial)}`);
   bits.push(rnav ? 'RNAV hold — mileage legs need GPS' : 'timed hold — fly the clock');
   bits.push(`EFC ${z(efc)}Z`);
   $('efc').textContent = bits.join('  ·  ');
@@ -977,6 +989,11 @@ function newScenario(randomize) {
              : S.fixMode === 'over' ? 0
              : S.fixMode === 'out'  ? clamp(+$('setFixDme').value || 15, 1, 60)
              : (Math.random() < 0.55 ? 0 : 5 + Math.floor(Math.random() * 21));
+    /* With a DME fix, the radial the fix is on is fixed by geometry and the
+       pattern can lie either side of it. Overhead the station the two are the
+       same thing. */
+    S.fixRadial = S.fixDme ? S.radial : S.radial;
+    if (S.fixDme && Math.random() < 0.5) S.radial = n360(S.fixRadial + 180);
     const pick = wantRnav ? ['d4', 'd5', 'd10'][Math.floor(Math.random() * 3)]
                           : (Math.random() < 0.8 ? 60 : 90);
     setLeg(pick);
@@ -1010,7 +1027,48 @@ function randomStart() {
   const d = S.startMode === 'airway'  ? 14 + Math.random() * 8
           : S.startMode === 'vectors' ?  6 + Math.random() * 5
           :                              9 + Math.random() * 7;
+  const F = fixPos();
   let hdg;
+
+  if (S.fixDme && !isRnav()) {
+    /* You cannot arrive at a point fifteen miles out on the 305 radial from
+       somewhere else without solving a triangle in your head, so ATC would not
+       ask. You get there by flying that radial — inbound toward the station or
+       outbound from it — and which of the two decides your entry. */
+    const inboundToStation = n360(S.fixRadial + 180);
+    const outboundFromStation = S.fixRadial;
+
+    // a small tracking error, so the 180 degree case lands clearly one side
+    let off = 3 + Math.random() * 5;
+    let along;
+    if (S.forceEntry === 'direct') {
+      along = Math.abs(n180(inboundToStation - inb)) < 90
+            ? inboundToStation : outboundFromStation;
+      off = (Math.random() * 8 - 4);
+    } else if (S.forceEntry === 'parallel' || S.forceEntry === 'teardrop') {
+      along = Math.abs(n180(inboundToStation - inb)) < 90
+            ? outboundFromStation : inboundToStation;
+      // relative = 180 + sgn*off for right turns, 180 - sgn*off for left
+      const wantHigh = S.forceEntry === 'parallel';   // above 180 is parallel
+      off = (wantHigh === (sgn > 0) ? 1 : -1) * (4 + Math.random() * 30);
+    } else {
+      along = Math.random() < 0.5 ? inboundToStation : outboundFromStation;
+      off = Math.random() * 10 - 5;
+    }
+    hdg = n360(along + off);
+    /* Sit back along the radial. Coming outbound from the station there is only
+       so much room before the fix, so keep the run-in inside it rather than
+       starting on the far side of the VOR. */
+    const outbound = Math.abs(n180(along - S.fixRadial)) < 90;
+    const run = outbound ? Math.min(d, S.fixDme * 0.8) : d;
+    const back = n360(along + 180);
+    S.ac.x = F.x + run * Math.sin(back * RAD);
+    S.ac.y = F.y + run * Math.cos(back * RAD);
+    S.ac.hdg = hdg;
+    return;
+  }
+
+  // overhead the station, or an RNAV waypoint: you can be sent from anywhere
   if (S.forceEntry === 'any') hdg = Math.random() * 360;
   else {
     const rel = S.forceEntry === 'teardrop' ? 114 + Math.random() * 62
@@ -1019,7 +1077,6 @@ function randomStart() {
     hdg = n360(inb + sgn * rel);
   }
   const brg = n360(hdg + 180);                  // sit upwind of the fix along that heading
-  const F = fixPos();
   S.ac.x = F.x + d * Math.sin(brg * RAD);
   S.ac.y = F.y + d * Math.cos(brg * RAD);
   if (S.forceEntry === 'any')
@@ -2530,6 +2587,7 @@ $('btnApply').onclick = () => {
   S.radial = n360(+$('setRadial').value || 0);
   S.turns = $('setTurns').value;
   S.fixDme = (S.holdType === 'rnav' || S.fixMode === 'over') ? 0 : clamp(+$('setFixDme').value || 0, 0, 60);
+  S.fixRadial = S.radial;
   setLeg($('setLeg').value);
   S.efcMin = 25;
   reposition(); buildClearance();
@@ -2640,7 +2698,10 @@ window.newRandomScenario = opts => {
     if (opts.force)  { S.forceEntry = opts.force; $('setForce').value = S.forceEntry; }
     reposition(); buildClearance();
   } else newScenario(true);
-  return { radial: S.radial, turns: S.turns, heading: Math.round(S.ac.hdg), dme: +dme().toFixed(1) };
+  return { radial: S.radial, fixRadial: S.fixRadial, fixDme: S.fixDme,
+           turns: S.turns, heading: Math.round(S.ac.hdg),
+           acRadial: +radialOf().toFixed(1), dme: +dme().toFixed(1),
+           inbound: inbound(), entry: recommendedEntry(S.ac.hdg) };
 };
 
 /* ============================ go ============================ */

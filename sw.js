@@ -1,5 +1,5 @@
 /* Offline cache. Bump CACHE when you re-deploy so the new build wins. */
-const CACHE = 'holding-sim-v19';
+const CACHE = 'holding-sim-v20';
 const ASSETS = ['./', './index.html', './manifest.webmanifest',
                 './icon-192.png', './icon-512.png', './icon-512-maskable.png', './apple-touch-icon.png'];
 
