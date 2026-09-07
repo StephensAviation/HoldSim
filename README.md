@@ -1,9 +1,49 @@
-# Holding Pattern Simulator
+# Instrument Procedures Trainer
 
 Live at <https://stephensaviation.github.io/HoldSim>
 
-A single-page holding pattern trainer. No build step, no dependencies, no network
-calls. Drop the folder on any static host and it runs.
+A single-page trainer for holding patterns and DME arcs. No build step, no
+dependencies, no network calls. Drop the folder on any static host and it runs.
+
+The app opens on a menu. Both exercises fly the same aeroplane on the same
+panel, so the wind, airspeed, equipment and turn model carry across when you
+switch between them.
+
+Picking an exercise opens a setup page for the clearance parameters and the
+difficulty; the controls there are the panel's own, moved into the page and
+moved back afterwards, so there is one of each in the document.
+
+**Holding patterns** — ATC issues a clearance, you call the entry before the fix
+and fly the pattern. VOR timed legs, RNAV mileage legs, holds overhead the
+station and holds at a DME fix. Graded a lap at a time on inbound leg timing,
+the fix crossing, average course deviation and time on the non-holding side; the
+entry is marked for being called in advance, for the right sector, and for
+whether you then flew what you called.
+
+**DME arcs** — intercept an arc off a radial, hold the distance round to the
+lead radial, then turn inbound on the final course. Graded on the proportion of
+the arc held inside tolerance, the worst excursion, the turn against the
+computed lead radial, and the final course afterwards.
+
+## Grading
+
+Each item scores 100 for no error, 70 at exactly the tolerance and 0 at twice
+it, with the percentage of the tolerance consumed shown beside it. Three
+difficulty levels set the tolerances and nothing else — Learning, Proficient,
+and Checkride, which is the instrument ACS (back to the fix within ten seconds,
+course within three quarters of a dot). Changing the level re-grades the laps
+already flown. Lateral navigation and timing only; a run flown with the entry
+sector or ideal pattern overlay showing is flagged as practice.
+
+## Panel
+
+A VOR/LOC course deviation head with its own directional gyro, or a Garmin G5,
+plus an optional turn coordinator and attitude indicator. A GPS navigator feeds
+whichever head is fitted through the GPS/VLOC switch, so a mechanical CDI flies
+an RNAV hold perfectly well — the deviation arriving at the OBS is computed
+rather than received, and full scale becomes a distance instead of an angle.
+The clearance sets the source when it is issued; you can still put it in the
+wrong place, which is the point.
 
 ## Files
 
@@ -24,7 +64,7 @@ Every path in the app is relative, so it works from a repository subpath such as
 ```bash
 git init -b main
 git add .
-git commit -m "VOR holding trainer"
+git commit -m "Instrument procedures trainer"
 git remote add origin git@github.com:stephensaviation/HoldSim.git
 git push -u origin main
 ```

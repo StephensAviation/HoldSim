@@ -32,7 +32,7 @@
     overflow:hidden;overscroll-behavior:none;
   }
   /* the only regions allowed to move under a finger */
-  .scroll,#sideCol,#help,#verdict{touch-action:pan-y;overscroll-behavior:contain}
+  .scroll,#sideCol,#help,#verdict,#menu{touch-action:pan-y;overscroll-behavior:contain}
   button,input,select{font-family:inherit;color:inherit}
 
   /* ---------- shell ---------- */
@@ -69,16 +69,13 @@
   #hsiBox{flex:1 1 0;min-height:80px;min-width:0;overflow:hidden;
     display:flex;flex-wrap:wrap;align-items:center;align-content:center;
     justify-content:center;gap:10px}
-  .statusRow{flex:none}
-  #apWrap{flex:none;display:none;align-self:center}
-  #ap{display:block}
   #tc{display:none}
   #ai{display:none}
   #mapSlot{display:none;min-width:0}
   #hsi,#dg{display:block}
   #hsiBox canvas{flex:none}
   #stage .card,#stage .grid4{margin-top:0}
-  .statusRow{display:flex;align-items:center;gap:12px}
+  .statusRow{flex:none;display:flex;align-items:center;gap:12px}
   #stageStatus{flex:1;display:flex;gap:18px;flex-wrap:wrap;font-family:var(--mono);font-size:11px;
     letter-spacing:.09em;color:var(--dim);padding:0 2px}
   .seg{display:flex;border:1px solid var(--rule);border-radius:2px;overflow:hidden;flex:none}
@@ -118,7 +115,8 @@
   /* ---------- side rail ---------- */
   #rail{display:flex;flex-direction:column;min-height:0;background:var(--bg);border-left:1px solid var(--rule)}
   body.norail #rail{display:none}
-  .scroll{overflow-y:auto;overflow-x:hidden;flex:1;min-height:0;scrollbar-width:thin;scrollbar-color:#2a343e transparent}
+  .scroll{overflow-y:auto;overflow-x:hidden;flex:1;min-height:0;-webkit-overflow-scrolling:touch;
+    scrollbar-width:thin;scrollbar-color:#2a343e transparent}
   .pad{padding:12px 14px 26px}
 
 
@@ -282,9 +280,7 @@
     main{grid-template-columns:minmax(0,1fr)}
     #rail{position:fixed;top:0;right:0;bottom:0;width:min(410px,92vw);z-index:40;
       box-shadow:-24px 0 48px rgba(0,0,0,.62)}
-    body.norail #rail{display:none}
   }
-  .scroll{-webkit-overflow-scrolling:touch}
   canvas{touch-action:none;-webkit-touch-callout:none}
   button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 
@@ -306,6 +302,62 @@
   body.touch .epBtns .btn{padding:22px 8px;font-size:16px}
   body.touch .epSkip{font-size:15px;padding:14px}
 
+  /* ---------- main menu ---------- */
+  #menu{position:fixed;inset:0;z-index:80;display:none;overflow:auto;-webkit-overflow-scrolling:touch;
+    background:radial-gradient(120% 90% at 50% 0%,#0d141c 0%,#05070a 62%)}
+  #menu.show{display:block}
+  .menuInner{max-width:960px;margin:0 auto;
+    padding:calc(30px + env(safe-area-inset-top)) max(20px,env(safe-area-inset-right))
+            calc(34px + env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left))}
+  .menuBrand{font-size:11px;letter-spacing:.34em;text-transform:uppercase;color:var(--dim2)}
+  .menuTitle{font-size:25px;letter-spacing:.16em;text-transform:uppercase;margin:7px 0 6px;
+    color:var(--txt);font-weight:600}
+  .menuSub{font-size:13.5px;color:var(--dim);max-width:64ch;line-height:1.65;margin:0}
+  .menuGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:22px}
+  .mcard{background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:16px 16px 14px}
+  .mcard h3{margin:0;font-size:14px;letter-spacing:.18em;text-transform:uppercase;color:var(--txt);font-weight:600}
+  .mcard p{margin:8px 0 0;font-size:13px;line-height:1.6;color:var(--dim)}
+  .mrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:13px}
+  .mrow .chip{cursor:pointer;text-transform:none;letter-spacing:.04em}
+  .mrow .chip:hover{color:#e6edf4;border-color:#46586a;background:#131b24}
+  #setup{position:fixed;inset:0;z-index:80;display:none;overflow:auto;-webkit-overflow-scrolling:touch;
+    background:radial-gradient(120% 90% at 50% 0%,#0d141c 0%,#05070a 62%)}
+  #setup.show{display:block}
+  .setupCols{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:14px;margin-top:20px;
+    align-items:start}
+  #setupSlot .btnrow,#setupDiff .btnrow{display:none}
+  #setupSlot .sect:first-child,#setupDiff .sect:first-child{margin-top:0}
+  .menuFoot{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+  .menuFoot .btn{flex:0 1 210px}
+  .menuNote{font-size:11.5px;color:var(--dim2);margin-top:16px;letter-spacing:.04em}
+  body.touch .menuTitle{font-size:27px}
+  body.touch .menuSub{font-size:15px}
+  body.touch .mcard h3{font-size:16px}
+  body.touch .mcard p{font-size:15px}
+
+  /* ---------- which panels belong to which mode ---------- */
+  #arcCard,#arcSect{display:none}
+  body.arcmode #arcCard{display:block}
+  body.arcmode #arcSect{display:block}
+  body.arcmode #entryCard,body.arcmode #holdSect,body.arcmode #crossSect{display:none}
+  /* ---------- scorecard ---------- */
+  #scoreCard:empty{display:none}
+  #scoreCard{margin-top:9px}
+  .scoreHead{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  .scoreHead .ttl{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim2)}
+  .scoreBig{font-family:var(--mono);font-size:27px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+  table.score{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11.5px;margin-top:7px}
+  table.score td{padding:3px 3px;border-top:1px solid #1b232b;color:#aab6c0;vertical-align:top}
+  table.score td.n{text-align:right;font-variant-numeric:tabular-nums;color:#dfe6ee;white-space:nowrap}
+  table.score td.g{text-align:right;width:38px;font-weight:600;font-variant-numeric:tabular-nums}
+  .scoreNote{font-size:11px;color:var(--dim2);margin-top:7px;line-height:1.55}
+  body.touch table.score{font-size:13.5px}
+  body.touch table.score td{padding:5px 3px}
+  body.touch .scoreBig{font-size:30px}
+  #arcCard .val{font-size:30px}
+  #arcCard .sub{line-height:1.65;margin-top:4px}
+  body.touch #arcCard .val{font-size:32px}
+
   /* ---------- error banner: never show a masked "Script error" again ---------- */
   #errBar{display:none;position:fixed;left:0;right:0;bottom:0;z-index:70;cursor:pointer;
     background:#4a1512;color:#ffd9d5;font-family:var(--mono);font-size:12px;line-height:1.5;
@@ -317,10 +369,11 @@
 <body>
 <div id="app">
   <header>
-    <div class="brand"><b>HOLDING PATTERN</b> SIMULATOR</div>
+    <div class="brand" id="brand"><b>HOLDING PATTERN</b> SIMULATOR</div>
     <div class="spacer"></div>
     <div class="state" id="hdrState"></div>
     <div class="kbdhint">A / D turn &nbsp;·&nbsp; Space fast-fwd &nbsp;·&nbsp; T timer &nbsp;·&nbsp; H help</div>
+    <button class="hdrbtn" id="btnMenu">Menu</button>
     <button class="hdrbtn" id="btnHelp">Controls</button>
     <button class="hdrbtn" id="btnRail">Panel</button>
   </header>
@@ -341,9 +394,12 @@
             <canvas id="dg"></canvas>
             <canvas id="tc"></canvas>
           </div>
-          <div id="apWrap"><canvas id="ap"></canvas></div>
           <div class="statusRow">
             <div id="stageStatus"></div>
+            <div class="seg">
+              <button class="segb on" data-src="vloc">VLOC</button>
+              <button class="segb" data-src="gps">GPS</button>
+            </div>
             <div class="seg">
               <button class="segb on" data-hsi="mech">Steam gauges</button>
               <button class="segb" data-hsi="g5">G5</button>
@@ -368,7 +424,7 @@
               </div>
               <div class="sub" id="lapInfo">1:00 legs</div>
             </div>
-            <div class="card">
+            <div class="card" id="entryCard">
               <div class="lbl">Your entry call</div>
               <div class="btnrow">
                 <button class="btn" data-e="direct">Direct<kbd>1</kbd></button>
@@ -376,10 +432,16 @@
                 <button class="btn" data-e="teardrop">Teardrop<kbd>3</kbd></button>
               </div>
             </div>
+            <div class="card" id="arcCard">
+              <div class="lbl">Arc error</div>
+              <div class="val" id="arcErr">0.00</div>
+              <div class="sub" id="arcSub"></div>
+            </div>
           </div>
 
           <div id="mapSlot"></div>
           <div id="verdict"></div>
+          <div id="scoreCard"></div>
           <div id="sectorWrap" style="display:none">
             <canvas id="sector"></canvas>
             <div id="sectorTxt"></div>
@@ -416,8 +478,8 @@
       <div class="setline"><label for="eqG5">Garmin G5</label><input type="radio" name="navdisp" id="eqG5"></div>
       <div class="setline"><label for="eqTc">Turn coordinator</label><input type="checkbox" id="eqTc" checked></div>
       <div class="setline"><label for="eqAi">Attitude indicator</label><input type="checkbox" id="eqAi"></div>
-      <div class="setline"><label for="eqAp">Heading autopilot</label><input type="checkbox" id="eqAp"></div>
-      <div class="hint">The panel takes one nav display or the other, and this is the same switch as the one above the readouts. Without a G5 the aircraft is not RNAV capable, so ATC will not issue mileage legs.</div>
+      <div class="setline"><label for="eqGps">GPS navigator, wired to both heads</label><input type="checkbox" id="eqGps" checked></div>
+      <div class="hint">The panel takes one nav display or the other, and this is the same switch as the one above the readouts. The GPS navigator feeds whichever head is fitted through the GPS/VLOC switch, so a mechanical CDI flies an RNAV hold perfectly well. Take the navigator out and the aircraft is not RNAV capable, so ATC stops issuing mileage legs.</div>
 
       <div class="sect">Tuning</div>
       <div class="setline"><label>OBS / selected course</label><input type="number" id="setObs" min="0" max="359" step="1" value="37"></div>
@@ -446,8 +508,19 @@
         <option value="radius">Constant radius &middot; wind corrected ground track</option></select></div>
       <div class="setline"><label for="setLatch">Latched turns (tap instead of hold)</label><input type="checkbox" id="setLatch"></div>
       <div class="setline"><label for="setAuto">Auto-start timer at fix &amp; wings level</label><input type="checkbox" id="setAuto"></div>
-      <div class="setline"><label for="setCheat">Show entry sector diagram (cheat)</label><input type="checkbox" id="setCheat"></div>
+      <div class="setline"><label for="setCheat">Show entry sector diagram and arc headings (cheat)</label><input type="checkbox" id="setCheat"></div>
 
+      <div id="railDiffSlot"><div id="diffSect">
+      <div class="sect">Tolerances</div>
+      <div class="setline"><label>Difficulty</label><select id="setLevel">
+        <option value="learn">Learning &middot; generous</option>
+        <option value="prof" selected>Proficient &middot; tighter</option>
+        <option value="acs">Checkride &middot; ACS</option></select></div>
+      <div class="hint" id="diffHint"></div>
+      </div></div>
+
+      <div id="railScenarioSlot">
+      <div id="holdSect">
       <div class="sect">Scenario</div>
       <div class="setline"><label>Radial</label><input type="number" id="setRadial" min="0" max="359" step="1" value="217"></div>
       <div class="setline"><label>Turns</label><select id="setTurns"><option value="right">Right (standard)</option><option value="left">Left</option></select></div>
@@ -485,12 +558,48 @@
         <b style="color:#8e9ba6">New arrival</b> keeps the clearance and drops you in from somewhere else.
         <b style="color:#8e9ba6">Restart this one</b> puts you back exactly where you started, clock and trail wiped — for reflying an entry you fluffed.
       </div>
+      </div>
+
+      <div id="arcSect">
+      <div class="sect">DME arc</div>
+      <div class="setline"><label>Arc radius (DME)</label>
+        <input type="number" id="setArcR" min="4" max="40" step="1" value="15"></div>
+      <div class="setline"><label>Direction round the station</label><select id="setArcDir">
+        <option value="any">Either &middot; mixed</option>
+        <option value="cw">Clockwise &middot; radials increasing</option>
+        <option value="ccw">Counterclockwise &middot; radials decreasing</option></select></div>
+      <div class="setline"><label>Arc length</label><select id="setArcSweep">
+        <option value="any">Random &middot; 50 to 140&deg;</option>
+        <option value="60">60&deg; &middot; short</option>
+        <option value="90">90&deg;</option>
+        <option value="140">140&deg; &middot; long</option></select></div>
+      <div class="setline"><label>Intercept from</label><select id="setArcEntry">
+        <option value="any">Either &middot; mixed</option>
+        <option value="outbound">A radial outbound from the station</option>
+        <option value="inbound">A radial inbound to the station</option></select></div>
+      <div class="btnrow">
+        <button class="btn" id="btnArcNew">New arc<kbd>N</kbd></button>
+        <button class="btn" id="btnArcApply">Apply fields</button>
+      </div>
+      <div class="btnrow">
+        <button class="btn" id="btnArcAgain">New intercept<kbd>Shift+N</kbd></button>
+        <button class="btn" id="btnArcRestart">Restart this one<kbd>Shift+R</kbd></button>
+      </div>
+      <div class="hint">
+        Fly the radial to the arc, turn ninety degrees onto it, hold the distance round to the lead
+        radial, then turn inbound on the final course. Scored on how much of the arc you held
+        inside tolerance, which is set by the difficulty above.
+      </div>
+      </div>
+      </div>
 
       <div class="sect">Share</div>
       <div class="hint">stephensaviation.github.io/HoldSim &nbsp;&mdash;&nbsp; open it in Safari and use Share &rarr; Add to Home Screen to get an app icon. There is a QR code on the Controls page.</div>
 
+      <div id="crossSect">
       <div class="sect">Fix crossings</div>
-      <table class="laps"><thead><tr><th>#</th><th>Lap</th><th>Hdg</th><th>Miss</th><th>Max off fix</th></tr></thead><tbody id="lapBody"></tbody></table>
+      <table class="laps"><thead><tr><th>#</th><th>Leg</th><th>Miss</th><th>Track</th><th>Score</th></tr></thead><tbody id="lapBody"></tbody></table>
+      </div>
     </div></div></aside>
   </main>
 
@@ -516,6 +625,57 @@
     <button class="tb" id="tbFF"><span class="glyph">&#9193;</span>Speed up</button>
     <button class="tb mult" id="tbMult">&times;8</button>
     <button class="tb turn" id="tbR"><span class="glyph">&#9654;</span>Right</button>
+  </div>
+</div>
+
+<div id="menu">
+  <div class="menuInner">
+    <div class="menuBrand">Stephens Aviation</div>
+    <div class="menuTitle">Instrument procedures trainer</div>
+    <p class="menuSub">Pick something to practise. Both exercises fly the same aeroplane on the same
+      panel, so the wind, airspeed, equipment and everything else in the Panel carries across.</p>
+
+    <div class="menuGrid">
+      <div class="mcard">
+        <h3>Holding patterns</h3>
+        <p>ATC issues a clearance, you call the entry before the fix and fly the pattern.
+          The entry is marked, and every lap is graded on leg timing, the fix crossing and
+          how well you held the course.</p>
+        <div class="mrow"><button class="chip" data-open="hold">Set up a hold &rarr;</button></div>
+      </div>
+
+      <div class="mcard">
+        <h3>DME arcs</h3>
+        <p>Intercept an arc off a radial, hold the distance round to the lead radial and turn
+          inbound on the final course. Graded on how much of the arc you flew inside tolerance,
+          the worst excursion and where you turned.</p>
+        <div class="mrow"><button class="chip" data-open="arc">Set up an arc &rarr;</button></div>
+      </div>
+    </div>
+
+    <div class="menuFoot">
+      <button class="btn" id="menuResume">Resume what I was flying</button>
+      <button class="btn" id="menuHelp">Controls &amp; how it works</button>
+    </div>
+    <div class="menuNote">The Menu button in the header brings this back. Esc closes it.</div>
+  </div>
+</div>
+
+<div id="setup">
+  <div class="menuInner">
+    <div class="menuBrand" id="setupBrand">Holding patterns</div>
+    <div class="menuTitle">Set it up</div>
+    <p class="menuSub" id="setupSub"></p>
+    <div class="setupCols">
+      <div class="mcard"><div id="setupDiff"></div></div>
+      <div class="mcard"><div id="setupSlot"></div></div>
+    </div>
+    <div class="menuFoot">
+      <button class="btn" id="setupStart">Start &mdash; random</button>
+      <button class="btn" id="setupExact">Use these exact fields</button>
+      <button class="btn" id="setupBack">Back</button>
+    </div>
+    <div class="menuNote">Everything here is also in the Panel while you fly, and Esc goes back.</div>
   </div>
 </div>
 
@@ -563,14 +723,11 @@
       <div><kbd>]</kbd><span>OBS 1&deg; right</span></div>
       <div><kbd>P</kbd><span>OBS 10&deg; left</span></div>
       <div><kbd>\</kbd><span>OBS 10&deg; right</span></div>
-      <div><kbd>O</kbd><span>Snap OBS to the inbound course</span></div>
+      <div><kbd>O</kbd><span>Snap OBS to the inbound course &mdash; on an arc, to the next ten degree radial ahead</span></div>
       <div><kbd>;</kbd><span>Heading bug 1&deg; left</span></div>
       <div><kbd>'</kbd><span>Heading bug 1&deg; right</span></div>
       <div><kbd>K</kbd><span>Bug to present heading</span></div>
       <div><kbd>Shift+K</kbd><span>Align the DG to the compass</span></div>
-      <div><kbd>Y</kbd><span>Autopilot power</span></div>
-      <div><kbd>,</kbd><span>Autopilot heading 1&deg; left</span></div>
-      <div><kbd>.</kbd><span>Autopilot heading 1&deg; right</span></div>
       <div><kbd>Enter</kbd><span>Press the G5 knob: swap HDG / CRS</span></div>
     </div>
     <p>Hold the OBS and bug keys to run them continuously. Shift makes them step 10&deg;.</p>
@@ -585,14 +742,16 @@
 
     <h2>Scenario</h2>
     <div class="keys">
-      <div><kbd>N</kbd><span>New random clearance and arrival</span></div>
-      <div><kbd>Shift+N</kbd><span>Same clearance, new arrival</span></div>
+      <div><kbd>N</kbd><span>New random clearance and arrival &mdash; or a new arc</span></div>
+      <div><kbd>Shift+N</kbd><span>Same clearance, new arrival &mdash; or a new run at the same arc</span></div>
       <div><kbd>Shift+R</kbd><span>Restart this one from the same start</span></div>
+      <div><kbd>Esc</kbd><span>Close the menu</span></div>
     </div>
 
     <h2>Display</h2>
     <div class="keys">
       <div><kbd>G</kbd><span>Swap steam gauges / G5</span></div>
+      <div><kbd>V</kbd><span>Swap the nav source: GPS / VLOC</span></div>
       <div><kbd>M</kbd><span>Map on and off</span></div>
       <div><kbd>C</kbd><span>Collapse the side panel</span></div>
       <div><kbd>B</kbd><span>Breadcrumbs</span></div>
@@ -633,17 +792,38 @@
     <p>Fitted by default, and it is the instrument you would actually be looking at to set up a turn. The little aeroplane banks in proportion to the rate of turn, not the angle of bank, so putting a wing tip on the doghouse is a standard rate turn whatever your airspeed — three degrees a second, a full circle in the two minutes printed on the dial, and half a turn in one. That is the whole basis of the timing in a hold.</p>
     <p>The ball underneath is a real inclinometer, not decoration. It swings out while you are rolling into or out of a bank, because the roll is not yet matched by the turn, then settles back to centre once the turn is established. It says NO PITCH INFORMATION on the face for the same reason the real one does: this instrument tells you nothing about whether you are climbing or descending.</p>
 
+    <h2>The menu</h2>
+    <p>The app opens on a menu with the two exercises on it: holding patterns and DME arcs. Picking one opens a setup page for the clearance and the tolerances, with two ways out of it — <b>Start</b> rolls a random clearance inside whatever you have set, and <b>Use these exact fields</b> builds the one in the boxes. The controls on that page are the same ones in the Panel, borrowed for the occasion, so there is only ever one radial box and one difficulty menu to get out of step.</p>
+    <p>The <b>Menu</b> button in the header brings it back at any time and <b>Esc</b> steps back a page, leaving whatever you were flying exactly where it was. Switching exercises does not disturb the aeroplane: the wind, airspeed, equipment, turn model and every other setting carry straight across.</p>
+
+    <h2>Grading</h2>
+    <p>Nothing you fly will be mathematically perfect, so the question is not whether you were exact but how much of your allowance you spent. Every item is measured against a tolerance in the units you already think in — seconds on the leg, miles off the fix, fraction of full scale deflection — and scored 100 for no error at all, <b>70 at exactly the tolerance</b>, and zero at twice it. Seventy is the pass mark, so a score in the seventies means legal but with nothing in hand, and the number keeps improving after you are inside tolerance because the margin you had left is the thing that actually gets better with practice.</p>
+    <p>Beside each score is the percentage of the tolerance that item consumed. That is the number to watch week to week: four seconds long on a one minute leg is 40% of the ACS allowance whether you passed or not, and watching it fall is more useful than watching a pass turn into another pass.</p>
+    <p>A hold is graded a lap at a time. The <b>inbound leg</b> is timed from the moment you are established — inside twenty five degrees of the inbound course — to crossing the fix, and compared with the leg you were cleared for; on an RNAV hold it is measured in miles instead. The <b>fix crossing</b> is how far to one side you went past. <b>Course held</b> is your average deviation over the inbound leg as a fraction of full scale, which is the ACS's three quarters of a dot in the form the instrument actually shows it. <b>Non-holding side</b> is how long you spent on the wrong side of the inbound course, counted only from the second crossing on, since a parallel entry is flown over there on purpose. The arrival at the fix is recorded but not graded: there was no leg of yours before it.</p>
+    <p>The entry is marked three ways, which is not the same question three times. Did you call one before the fix or did the simulation have to stop and ask; was it the right sector; and — the one worth having — <b>did you fly what you called</b>. Calling teardrop and then flying a direct is a common thing to do and nothing else will tell you that you did it. It is judged from your heading and which side of the course you are on at the first steady wings-level after the fix, and if that is genuinely ambiguous it is left unmarked rather than guessed at.</p>
+    <p>An arc is graded on the <b>proportion of the arc you held inside tolerance</b> rather than the average error, because one bad excursion and a generally sloppy arc average out the same and do not feel remotely the same. Then the worst excursion, where you left the arc against the computed lead radial, and how well you tracked the final course afterwards.</p>
+
+    <h2>Difficulty</h2>
+    <p>Difficulty changes the tolerances you are graded against and nothing else. The aeroplane, the wind and the clearance are identical on all three: <b>Learning</b> is generous, for getting the shape of the thing right before worrying about the numbers; <b>Proficient</b> is tighter than a first attempt and looser than the ride; and <b>Checkride</b> is the instrument ACS — back to the fix within ten seconds, the course within three quarters of a dot. Changing it re-grades the laps you have already flown, so a session is always measured against one set of numbers rather than a moving one.</p>
+    <p>Two honest limits on all of this. It grades what the simulation models, which is lateral navigation and timing — a real ride adds altitude, airspeed, configuration and talking to someone while you do it. And if the entry sector diagram or the ideal pattern overlay was on, the card says so, because a lap flown with the answer drawn on the map is practice and not a measurement.</p>
+
+    <h2>DME arcs</h2>
+    <p>An arc is a circle of constant DME about the station, so your own radial is your position along it and the DME window is the entire task. The clearance gives you four things: a radial to intercept it from, the arc distance, which way round to go, and the radial to turn inbound on. It is the feeder route off an approach plate, and it is flown the same way.</p>
+    <p>You start on the intercept radial, either outbound from the station or inbound to it, because a point on an arc is not somewhere you can navigate to any other way. Fly the radial until the arc distance comes up, leading the turn by about half your turn radius — a bit over a quarter of a mile at a hundred knots — and roll out ninety degrees off, with the station on a wing tip.</p>
+    <p>Then it is twist and turn. Set the OBS ten degrees ahead of yourself in the direction you are going, hold the heading, and wait for the needle to centre; when it does you have flown ten degrees round, so turn ten degrees and twist another ten. The distance corrects itself between times: outside the arc, turn toward the station; inside it, turn away. A few degrees of correction is plenty, and in wind you will find yourself holding more of it on one side of the arc than the other.</p>
+    <p>The lead radial for the turn inbound is where the turn radius subtends the station — about two degrees on a fifteen mile arc, more on a tight one, and it is drawn as an amber tick across the arc on the map. Turn inbound there and roll out on the final course; the panel then measures how well you track it in to the station.</p>
+    <p>The arc card beside the readouts shows how far off the distance you are, live, colour coded: green inside half a mile, amber to a mile, red beyond. When you finish, the verdict panel gives you the average and the worst deviation for the whole arc, where you actually started the turn inbound against where the lead radial was, and how well you held the final course. Half a mile either side is the tolerance an arc on an approach is flown to.</p>
+
     <h2>Choosing what you practise</h2>
-    <p>Two menus in the panel decide what ATC hands you. <b>Hold type</b> is either a VOR hold on the clock or an RNAV hold on mileage legs, or left mixed. Pick RNAV and the steam gauges grey out in both places they appear, in the equipment list and on the selector above the readouts, because a mechanical CDI has no way to measure a leg in miles. The leg lengths on offer follow the same rule, so you cannot end up with a combination that could not be flown.</p>
+    <p>Two menus in the panel decide what ATC hands you. <b>Hold type</b> is either a VOR hold on the clock or an RNAV hold on mileage legs, or left mixed. Pick RNAV and the clearance comes with mileage legs, which the GPS navigator flies on either head. The leg lengths on offer follow what is fitted rather than which display you are looking at: take the navigator out of the aeroplane and the mileage options grey out, because nothing on board can measure a leg in miles.</p>
     <p><b>Hold fix</b> is either overhead the station or out along the radial at a distance you set, or mixed. Out on the radial is the case a controller gives you when they say to hold fifteen miles out: the DME window still reads to the station, so that is how you find the fix, and you never touch the cone of confusion the whole lap.</p>
 
     <h2>Equipment</h2>
-    <p>The panel has tick boxes for what is fitted: the CDI head with its directional gyro, the G5, and a heading autopilot. Take the G5 out and the aeroplane is no longer RNAV capable, so the mileage leg options grey out and ATC stops issuing them — you will only ever be given timed holds. Take the CDI head out and you are on the glass alone. One nav display always has to stay fitted, so unticking the last one puts it straight back.</p>
-    <p>The autopilot is a single-axis heading holder, the kind that has one job. Flick the rocker and it captures whatever heading you are on, then the three digit window shows the selected heading and the knob changes it. The two arrow lamps annunciate the direction it is turning, so as soon as you wind the knob one way the corresponding lamp lights and stays lit until the turn is complete. It turns the way you wind the knob rather than taking the shortest way round, so winding left through 270 flies a left 270 instead of a right 90, and a full 360 is just a whole turn of the knob. It rolls into a standard rate turn and eases off inside the last twelve degrees rather than slamming to wings level. Touching any turn control disconnects it, exactly as gripping the yoke does on the real thing, so you never end up fighting it for the controls.</p>
-    <p>It is worth flying a few patterns on it. A hold flown on the autopilot is all planning and timing with none of the workload of holding a heading, which is a good way to see the geometry clearly before you go back to hand flying it.</p>
-
-    <h2>The clearance picks your nav source</h2>
-    <p>You choose the panel, not the source. Mileage legs are an RNAV hold and can only be flown on GPS, so the steam gauges are locked out and the G5 comes up on the magenta needle. A timed hold is a conventional VOR hold, so the G5 comes up green on VOR1 and the steam gauges are available again. The G5 button tells you which one it has taken. That is not a simplification: a mechanical CDI has no way to measure a leg in miles, and picking the wrong source is one of the easier ways to bust a hold for real.</p>
+    <p>The panel has tick boxes for what is fitted: the CDI head with its directional gyro, the G5, and the GPS navigator. The navigator is wired to whichever head you have, so it is the aeroplane's RNAV capability, not the display — take it out and the mileage leg options grey out and ATC stops issuing them, whatever is on the panel. One nav display always has to stay fitted, so unticking the last one puts it straight back.</p>
+    <h2>GPS / VLOC: the source is a switch, not a display</h2>
+    <p>The navigator feeds whatever head is wired to it, so an ordinary CDI head flies an RNAV hold perfectly well — the deviation arriving at the OBS is simply computed rather than received. That is what the GPS/VLOC switch on the navigator does, and it is the switch that decides what the needle means. There is a VLOC / GPS selector above the readouts and the <b>V</b> key does the same thing.</p>
+    <p>The clearance sets it for you when it is issued: mileage legs come up on GPS, a timed VOR hold comes up on VLOC. But it is only a default, and you can leave it in the wrong place — fly an RNAV hold with the needle still on the VOR receiver and it will track the station instead of the leg, which is one of the easier ways to bust a hold for real. The CDI head annunciates the source under the face, magenta for GPS with the full scale in miles beside it, and the G5 needle goes magenta for the same reason.</p>
+    <p>What does not change with the source is the hardware. A GPS-fed CDI head is still a moving-coil pointer with mass and damping, so it lags and overshoots exactly as it does on a VOR — the signal behind it is clean, the movement in front of it is not. That is worth flying once: the same clean GPS cross-track drawn instantly on the G5 and dragged there by a mechanical needle beside it.</p>
     <p>Green needle means you are working the station, so everything that comes with that is in play — the needle tightens without limit as you close in, and the cone of confusion still swallows it overhead. Magenta means the position is being computed, so the bar stays linear and calm straight across the fix. Same hold, same aeroplane, completely different picture.</p>
 
     <h2>Two panels, three behaviours</h2>
@@ -651,7 +831,7 @@
     <p>The G5 is a renderer, not a movement. Deviation is drawn where the computed number says, with no inertia and nothing to bang against, and TO/FROM switches cleanly rather than fading. When the signal fails its validity test the deviation bar and bearing pointer are removed outright and an amber NAV annunciation appears — no gradual warning, it is either there or it is not. That difference matters over the station: the mechanical unit tells you it is losing confidence, while the digital one hands you a clean picture right up until it hands you nothing.</p>
 
     <h2>On an iPad</h2>
-    <p>Multiple fingers work. Every control tracks the specific touch that grabbed it and ignores the others, so you can hold a turn button down with one thumb while working the autopilot knob, tapping the stopwatch, or calling an entry with the other hand. Releasing one finger never releases another control.</p>
+    <p>Multiple fingers work. Every control tracks the specific touch that grabbed it and ignores the others, so you can hold a turn button down with one thumb while working the OBS knob, tapping the stopwatch, or calling an entry with the other hand. Releasing one finger never releases another control.</p>
     <p>Touch controls switch themselves on when the browser reports a coarse pointer, and there is a checkbox in the Flight panel to force them either way if you want to see them on a desktop. They bring up a control bar along the bottom: hold Left or Right to turn, tap Speed up to run the clock fast and tap it again to drop back, and the number beside it cycles the multiplier.</p>
     <p>The stopwatch works the way a stopwatch does. Tap to start, tap to stop, tap the stopped clock again to zero it. That applies both to the bar and to the timer card on the panel. Everything else is already touchable: drag round the OBS knob on the CDI head or the G5 encoder, press the G5 encoder to swap between HDG and CRS, drag the DG to move the heading bug, and double tap the DG knob to realign the gyro.</p>
     <p>The map moves with the layout. On a desktop it sits in the side rail; on a tablet, where the rail is a slide-over that would bury it, it moves into the stage itself — under the readouts in landscape, below them in portrait. It is the same element and the same canvas either way, so every layer toggle comes with it. Hide and Show on the map header collapses it when you want the space back, which is the same thing the M key does.</p>
@@ -669,7 +849,7 @@
     <p>That is the whole wind correction problem made visible, which is worth a moment before you go back to the steam gauges — the CDI head cannot tell you any of this, and inferring it from the way the needle creeps is exactly the skill the older panel demands.</p>
 
     <h2>VOR against GPS</h2>
-    <p>A VOR measures an angle, so its deviation is a fixed number of degrees however far out you are, and it tightens without limit as you close on the station. GPS measures cross-track distance, so full scale is a fixed number of miles — 2.0 enroute, 1.0 terminal, 0.30 on approach — and the bar behaves the same a mile from the fix as it does thirty. Fly the same hold on G5 VOR and then on G5 GPS and watch what happens overhead: the VOR bar becomes unusable and flags, while the GPS bar tracks straight through, flipping TO to FROM cleanly at the abeam line. There is no cone of confusion on GPS because nothing is being measured from the station.</p>
+    <p>A VOR measures an angle, so its deviation is a fixed number of degrees however far out you are, and it tightens without limit as you close on the station. GPS measures cross-track distance, so full scale is a fixed number of miles — 2.0 enroute, 1.0 terminal, 0.30 on approach — and the bar behaves the same a mile from the fix as it does thirty. Fly the same hold on VOR and then on GPS — on either head — and watch what happens overhead: the VOR bar becomes unusable and flags, while the GPS bar tracks straight through, flipping TO to FROM cleanly at the abeam line. There is no cone of confusion on GPS because nothing is being measured from the station.</p>
 
     <h2>Station passage</h2>
     <p>The cone of confusion is modelled with a half-angle of 30&deg; from the vertical, so it begins once the station climbs above about 60&deg; of elevation and its radius is a little over half your height above the station. At 4,000 ft that is roughly 0.4 NM, matching the usual rule of thumb of half a mile at 6,000 ft and three miles at FL360. Both the altitude and the half-angle are adjustable in the Flight panel.</p>
@@ -715,6 +895,14 @@ const mmss = s => {
   return (neg ? '-' : '') + Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
 };
 const $ = id => document.getElementById(id);
+/* Everything written every frame goes through these. getElementById is a lookup
+   per element per frame for no reason, and assigning the same string back into
+   the DOM sixty times a second is work the browser cannot skip for us. */
+const ELS = {};
+const el = id => ELS[id] || (ELS[id] = document.getElementById(id));
+function setTxt(id, v) { const e = el(id); if (e._t !== v) { e._t = v; e.textContent = v; } }
+function setHtml(id, v) { const e = el(id); if (e._h !== v) { e._h = v; e.innerHTML = v; } }
+function setCls(id, c, on) { el(id).classList.toggle(c, !!on); }
 
 const VORS = [
   ['MZB','MISSION BAY'], ['PGY','POWAY'], ['OCN','OCEANSIDE'], ['JLI','JULIAN'],
@@ -736,9 +924,10 @@ const S = {
   vor: VORS[0], call: CALLS[0],
   radial: 217, turns: 'right', legSec: 60, legNm: 0, fixDme: 0, fixRadial: 217, wpt: 'CHOWW',
   obs: 37, bug: 0, alt: 4000, coneAng: 30, hsiStyle: 'mech', gpsScale: 1.0, holdType: 'any', fixMode: 'any',
-  eq: { cdi: true, g5: false, ap: false, tc: true, ai: false },
+  eq: { cdi: true, g5: false, tc: true, ai: false, gps: true },
+  src: 'vloc',        // what is feeding the head: the VOR receiver or the GPS
   ball: 0,
-  ap: { on: false, hdg: 0, knob: 0, togo: 0 }, gyroDrift: 0, gyroErr: 0, startState: null,
+  gyroDrift: 0, gyroErr: 0, startState: null,
   prompting: false, g5Field: 'hdg', knobAngle: 0, hitG5: null, hitObs: null, hitHdg: null,
   nav: { pos: 0, vel: 0, tf: -1, flag: 0, valid: 1, brg: 0, n1: 0, n2: 0, n3: 0, n1t: 0, n2t: 0, n3t: 0, nT: 0 },
   wind: { dir: 0, spd: 0 },
@@ -746,14 +935,30 @@ const S = {
   startMode: 'direct', forceEntry: 'any', randWind: false,
   timer: { t: 0, run: false },
   crumbs: [], crumbAcc: 0,
-  zoom: 26, follow: false,
+  zoom: 26,
   call_entry: null, answer: null,
   crossings: [], lastCrossT: null, elapsed: 0,
   prevDist: null, crossCool: 0, maxDme: 0,
   efcMin: 0,
   show: { plane: 1, fix: 1, course: 1, crumbs: 1, ideal: 0, rings: 0, rose: 0, follow: 0 },
   autoTimer: false, cheat: false, realPhrase: true,
-  wasTurning: false
+  wasTurning: false,
+
+  /* which exercise is loaded. The engine, the panel and the map are shared;
+     only the task, the clearance and the scoring change. */
+  mode: 'hold', menu: false, setup: false, started: false, level: 'prof',
+  /* Per-lap measurement for the hold. The leg clock starts when you are
+     established inbound, not when you roll out of the turn, so a lap you never
+     settle on the course simply has no leg time rather than a flattering one. */
+  hold: { legStart: null, legD0: 0, devSum: 0, devN: 0, devMax: 0, wrong: 0,
+          entryWatch: false, entryLevel: 0, entryDue: 0, entryFlown: null,
+          prompted: false, assisted: false },
+  arc: {
+    r: 15, dir: 1, sweep: 90, startRadial: 0, endRadial: 90, entry: 'outbound',
+    phase: 'intercept', err: 0, maxErr: 0, sumErr: 0, tSamp: 0,
+    turnRadial: null, lastTan: null, inTol: 0, assisted: false,
+    xtkMax: 0, xtkSum: 0, xtkT: 0
+  }
 };
 
 /* The holding fix is either the station itself or a point out along the radial.
@@ -770,8 +975,31 @@ const fixDist = () => { const F = fixPos(); return Math.hypot(S.ac.x - F.x, S.ac
    else is a conventional VOR hold and belongs on the green needle. The pilot
    does not pick this — the clearance does. */
 const isRnav = () => !!S.legNm;
-const rnavLocked = () => S.holdType === 'rnav' || isRnav();   // greys the steam gauges out
-const navSrc = () => isRnav() ? 'gps' : 'vloc';
+/* Mileage legs need a GPS navigator in the aeroplane — not a particular display,
+   since either head can be driven by it. */
+const rnavCapable = () => S.eq.gps;
+/* A GPS navigator drives whatever head is wired to it — the G5, or the OBS on a
+   mechanical CDI through the GPS/VLOC switch. So the source is a switch in the
+   aeroplane, not a property of the display: what changes with the source is the
+   signal, and what changes with the display is how that signal is drawn. */
+const navSrc = () => (S.eq.gps && S.src === 'gps') ? 'gps' : 'vloc';
+/* The clearance picks the source it needs; the pilot can still switch it, and
+   flying an RNAV hold on the green needle is a real way to get it wrong. */
+function autoSource() {
+  S.src = (isRnav() && S.eq.gps) ? 'gps' : 'vloc';
+  syncSrcBtns();
+}
+function setSource(v) {
+  if (v === 'gps' && !S.eq.gps) return;
+  S.src = v; syncSrcBtns(); navInit();
+}
+function syncSrcBtns() {
+  document.querySelectorAll('[data-src]').forEach(b => {
+    b.classList.toggle('on', b.dataset.src === navSrc());
+    b.disabled = b.dataset.src === 'gps' && !S.eq.gps;
+    b.title = b.disabled ? 'No GPS navigator fitted' : '';
+  });
+}
 /* Standard rate keeps the RATE constant, so in wind the ground track is blown
    out of shape and a full circle does not close. Constant radius keeps the
    GROUND TRACK circular instead, varying the rate with groundspeed — faster and
@@ -841,7 +1069,23 @@ function gpsDev() {
   const along = px * u.x   + py * u.y;               // - = fix still ahead
   return { to: along < 0, xtk, raw: -(xtk / S.gpsScale) * 10 };
 }
-function devNow() { return (S.hsiStyle === 'g5' && navSrc() === 'gps') ? gpsDev() : cdi(); }
+function devNow() { return navSrc() === 'gps' ? gpsDev() : cdi(); }
+
+/* Integrate the moving-coil pointer toward a target. The movement is the same
+   piece of hardware whatever is driving it, so a GPS-fed CDI head still lags,
+   overshoots and knocks against its stops — it is only the signal behind it
+   that is clean. */
+function needleStep(dt, tgt) {
+  const N = S.nav, wn = 3.2, z = 0.55, ks = wn * wn, cs = 2 * z * wn;
+  let rem = dt, guard = 0;
+  while (rem > 0 && guard++ < 60) {                  // substep so it stays stable at 16x
+    const h = Math.min(rem, 0.02); rem -= h;
+    N.vel += (ks * (tgt - N.pos) - cs * N.vel) * h;
+    N.pos += N.vel * h;
+    if (N.pos >  STOP) { N.pos =  STOP; N.vel = -N.vel * 0.25; }   // bounce off the stop
+    if (N.pos < -STOP) { N.pos = -STOP; N.vel = -N.vel * 0.25; }
+  }
+}
 
 function updNav(dt) {
   const N = S.nav;
@@ -855,13 +1099,15 @@ function updNav(dt) {
   const kn = Math.min(1, dt * 7);
   N.n1 += (N.n1t - N.n1) * kn; N.n2 += (N.n2t - N.n2) * kn; N.n3 += (N.n3t - N.n3) * kn;
 
-  if (S.hsiStyle === 'g5' && navSrc() === 'gps') {
+  if (navSrc() === 'gps') {
     /* GPS. Position is known directly, so there is no cone and no ambiguity
-       zone — the bar stays live and calm straight across the fix, and TO/FROM
-       flips cleanly at the abeam line. */
-    const d = gpsDev();
-    N.pos += (clamp(d.raw, -10, 10) - N.pos) * Math.min(1, dt * 12);
-    N.vel = 0; N.tf = d.to ? 1 : -1; N.flag = 0; N.valid = 1;
+       zone — deviation stays live and calm straight across the fix, and TO/FROM
+       flips cleanly at the abeam line. The G5 renders it exactly; the mechanical
+       head still has to move a physical pointer to get there. */
+    const d = gpsDev(), tgt = clamp(d.raw, -STOP, STOP);
+    if (S.hsiStyle === 'g5') { N.pos += (clamp(d.raw, -10, 10) - N.pos) * Math.min(1, dt * 12); N.vel = 0; }
+    else needleStep(dt, tgt);
+    N.tf = d.to ? 1 : -1; N.flag = 0; N.valid = 1;
     N.brg = n360(N.brg + n180(n360(radialOf() + 180) - N.brg) * Math.min(1, dt * 10));
     return;
   }
@@ -888,16 +1134,7 @@ function updNav(dt) {
 
   /* Steam gauge. A moving-coil pointer with mass and damping. */
   const amp = Math.pow(1 - cq, 1.4) * 15 + 0.12;
-  const tgt = clamp(raw.raw + N.n1 * amp, -STOP, STOP);
-  const wn = 3.2, z = 0.55, ks = wn * wn, cs = 2 * z * wn;
-  let rem = dt, guard = 0;
-  while (rem > 0 && guard++ < 60) {                  // substep so it stays stable at 16x
-    const h = Math.min(rem, 0.02); rem -= h;
-    N.vel += (ks * (tgt - N.pos) - cs * N.vel) * h;
-    N.pos += N.vel * h;
-    if (N.pos >  STOP) { N.pos =  STOP; N.vel = -N.vel * 0.25; }   // bounce off the stop
-    if (N.pos < -STOP) { N.pos = -STOP; N.vel = -N.vel * 0.25; }
-  }
+  needleStep(dt, clamp(raw.raw + N.n1 * amp, -STOP, STOP));
   N.valid = 1;
 
   // TO / FROM sense: collapses toward neither as quality drops
@@ -930,6 +1167,70 @@ function cdi() {
   return { to: true, dev: clamp(dTo, -10, 10), raw: dTo };
 }
 
+/* ============================ grading ============================
+   Every number here is a tolerance in the units the pilot already thinks in:
+   seconds on the leg, miles off the fix, fraction of full scale deflection.
+   The Checkride row is the instrument ACS — back to the fix within ten seconds
+   and the course within three quarters of a dot — and the easier rows are the
+   same items with the same meaning, just further apart. Nothing is graded here
+   that the simulation does not actually model: this is lateral and timing only,
+   and a real ride adds altitude, airspeed and radio work on top. */
+const LEVELS = {
+  learn: { name: 'Learning',
+           note: 'Generous, for getting the shape of the thing right first.',
+           legT: 25, legD: 1.0, miss: 1.2, dev: 1.00, wrong: 40, arc: 1.5, lead: 10, xtk: 1.5 },
+  prof:  { name: 'Proficient',
+           note: 'Tighter than a first attempt, looser than the ride itself.',
+           legT: 15, legD: 0.6, miss: 0.7, dev: 0.90, wrong: 20, arc: 1.0, lead: 6,  xtk: 1.0 },
+  acs:   { name: 'Checkride',
+           note: 'Instrument ACS: back to the fix within \u00b110 seconds and the course within \u00be scale.',
+           legT: 10, legD: 0.4, miss: 0.4, dev: 0.75, wrong: 8,  arc: 0.5, lead: 4,  xtk: 0.7 }
+};
+const TOL = () => LEVELS[S.level] || LEVELS.prof;
+
+/* 100 for no error, 70 at exactly the tolerance, 0 at twice it. Flat full marks
+   anywhere inside tolerance would hide the thing worth watching, which is how
+   much of the margin you had left. */
+function grade(err, tol) {
+  if (err === null || !isFinite(err) || !tol) return null;
+  const e = Math.abs(err);
+  return e <= tol ? Math.round(100 - 30 * (e / tol))
+                  : Math.max(0, Math.round(70 - 70 * ((e - tol) / tol)));
+}
+const used = (err, tol) => Math.round(100 * Math.abs(err) / tol);
+const gcol = g => g === null ? 'var(--dim2)' : g >= 70 ? 'var(--grn)' : g >= 45 ? 'var(--amb)' : 'var(--red)';
+function overall(items) {
+  let a = 0, w = 0;
+  for (const it of items) if (it.g !== null) { a += it.g * it.w; w += it.w; }
+  return w ? Math.round(a / w) : null;
+}
+/* An item is one graded line: label, the measured value as the pilot would say
+   it, the grade, and how much of the tolerance it ate. */
+const item = (label, val, err, tol, w) => ({
+  label, val, g: grade(err, tol), pct: err === null ? null : used(err, tol), w: w || 1
+});
+
+function scoreTable(items) {
+  return `<table class="score">` + items.map(i =>
+    `<tr><td>${i.label}</td><td class="n">${i.val}${i.pct === null ? '' :
+      ` <span style="color:var(--dim2)">${i.pct}%</span>`}</td>` +
+    `<td class="g" style="color:${gcol(i.g)}">${i.g === null ? '\u2014' : i.g}</td></tr>`).join('') +
+    `</table>`;
+}
+function scoreBlock(title, score, items, note) {
+  return `<div class="card"><div class="scoreHead">` +
+    `<span class="ttl">${title}</span>` +
+    `<span class="scoreBig" style="color:${gcol(score)}">${score === null ? '\u2014' : score}</span></div>` +
+    scoreTable(items) + (note ? `<div class="scoreNote">${note}</div>` : '') + `</div>`;
+}
+
+/* Cross-track from the inbound course through the fix; positive is right of it,
+   and the holding side is whichever way the turns go. */
+function xtkHold() {
+  const c = inbound() * RAD, F = fixPos();
+  return (S.ac.x - F.x) * Math.sin(c + Math.PI / 2) + (S.ac.y - F.y) * Math.cos(c + Math.PI / 2);
+}
+
 /* ============================ entry logic ============================ */
 function recommendedEntry(hdg) {
   const rel = S.turns === 'right' ? n360(hdg - inbound()) : n360(inbound() - hdg);
@@ -948,6 +1249,7 @@ function entryHow(kind) {
 
 /* ============================ clearance ============================ */
 function buildClearance() {
+  if (S.mode === 'arc') return buildArcClearance();
   const dir = compass8(S.radial);
   const rnav = !!S.legNm;               // mileage legs are an RNAV thing; time is the VOR way
   const leg = rnav ? `<em>${S.legNm} mile legs</em>`
@@ -972,10 +1274,9 @@ function buildClearance() {
   bits.push(`EFC ${z(efc)}Z`);
   $('efc').textContent = bits.join('  ·  ');
 
-  if (rnav && S.hsiStyle === 'mech') setHsi('g5');   // forced onto the G5
-  else { syncHsiBtns(); navInit(); }
+  autoSource();                 // the clearance picks the source it needs
+  syncHsiBtns(); navInit();
 }
-
 function newScenario(randomize) {
   if (randomize) {
     S.radial = Math.floor(Math.random() * 360);
@@ -983,7 +1284,7 @@ function newScenario(randomize) {
     /* Both menus are honoured. Left on "either", most holds come out over the
        station and timed, with mileage legs only on the RNAV ones. */
     const wantRnav = S.holdType === 'rnav' ||
-                     (S.holdType === 'any' && S.eq.g5 && Math.random() < 0.25);
+                     (S.holdType === 'any' && rnavCapable() && Math.random() < 0.25);
     S.wpt = WPTS[Math.floor(Math.random() * WPTS.length)];
     S.fixDme = wantRnav ? 0                       // the waypoint is the fix
              : S.fixMode === 'over' ? 0
@@ -1097,7 +1398,9 @@ function restart() {
   S.prevDist = null; S.crossCool = 0; S.maxDme = 0;
   S.call_entry = null; S.answer = null;
   S.timer.t = 0; S.timer.run = false; S.gyroErr = 0;
-  navInit(); renderVerdict(); renderLaps(); syncEntryBtns();
+  resetHoldStats();
+  if (S.mode === 'arc') resetArcStats();
+  navInit(); renderVerdict(); renderLaps(); renderScore(); syncEntryBtns();
 }
 
 function reposition() {
@@ -1109,11 +1412,194 @@ function reposition() {
   S.prevDist = null; S.crossCool = 0; S.maxDme = 0;
   S.call_entry = null; S.answer = null;
   S.timer.t = 0; S.timer.run = false;
+  resetHoldStats();
   S.zoom = clamp(150 / (fixDist() + 3), 6, 60);   // frame the fix and the aircraft
   S.gyroErr = 0;
   S.startState = { x: S.ac.x, y: S.ac.y, hdg: S.ac.hdg, obs: S.obs, bug: S.bug, zoom: S.zoom };
   navInit();
-  renderVerdict(); renderLaps(); syncEntryBtns();
+  renderVerdict(); renderLaps(); renderScore(); syncEntryBtns();
+}
+
+/* ============================ DME arcs ============================
+   An arc is a circle of constant DME about the station, so the aircraft's own
+   radial is its position along it and the DME window is the whole task. The
+   assignment is: track a radial out to (or in to) the arc, turn ninety degrees
+   onto it, hold the distance round to a lead radial, then turn inbound on the
+   final course — the same shape as the arc feeder on an approach plate.
+
+   dir = +1 is clockwise on the map, which is radials increasing, right turns,
+   and the station off the right wing tip. -1 is the mirror of all three. */
+
+const arcTangent = brg => n360(brg + S.arc.dir * 90);      // no-wind heading on the arc
+const arcErrNow  = () => dme() - S.arc.r;                  // + = outside the arc
+/* Degrees still to run round the arc, measured the way you are going. */
+const arcToGo    = () => n360(S.arc.dir * (S.arc.endRadial - radialOf()));
+/* Lead for the turn inbound: the turn radius subtends this angle at the station.
+   Two degrees on a fifteen mile arc at a hundred knots, more on a tight one. */
+const leadAngle  = () => clamp(Math.atan2(turnRadius(), S.arc.r) / RAD, 0.4, 40);
+/* Which way you turn to roll onto the arc off the intercept radial. */
+const arcOntoTurn = () => ((S.arc.entry === 'outbound') === (S.arc.dir > 0)) ? 'right' : 'left';
+const arcPhaseTxt = () => ({ intercept: 'intercepting', arc: 'on the arc',
+                             inbound: 'turned inbound', done: 'complete' })[S.arc.phase];
+/* Cross-track from the final course, which runs through the station. */
+function xtkFinal() {
+  const c = inbound() * RAD;
+  return S.ac.x * Math.sin(c + Math.PI / 2) + S.ac.y * Math.cos(c + Math.PI / 2);
+}
+
+function buildArcClearance() {
+  const A = S.arc;
+  const side = compass8(n360(A.startRadial + A.dir * A.sweep / 2));   // where the arc lies
+  const lead = A.entry === 'outbound'
+    ? `depart the ${S.vor[0]} VOR on the <em>${pad3(A.startRadial)}</em> radial`
+    : `track inbound on the <em>${pad3(A.startRadial)}</em> radial`;
+  $('clearance').innerHTML =
+    `${S.call}, ${lead}, intercept the <em>${A.r} DME arc</em> ${side} of ${S.vor[0]}, ` +
+    `arc <em>${A.dir > 0 ? 'clockwise' : 'counterclockwise'}</em> to the ` +
+    `<em>${pad3(A.endRadial)}</em> radial, then inbound on the ` +
+    `<em>${pad3(inbound())}</em> course to the VOR.`;
+
+  const now = new Date();
+  const efc = new Date(now.getTime() + S.efcMin * 60000);
+  const z = d => String(d.getUTCHours()).padStart(2, '0') + String(d.getUTCMinutes()).padStart(2, '0');
+  $('efc').textContent = [
+    `${S.vor[1]} VOR`,
+    `${A.r.toFixed(1)} DME arc`,
+    `R-${pad3(A.startRadial)} to R-${pad3(A.endRadial)}, ${Math.round(A.sweep)}\u00b0 ${A.dir > 0 ? 'CW' : 'CCW'}`,
+    `final course ${pad3(inbound())}`,
+    `EFC ${z(efc)}Z`
+  ].join('  \u00b7  ');
+
+  autoSource();                 // an arc is a VOR and DME exercise
+  syncHsiBtns(); navInit();
+}
+
+function newArc(randomize) {
+  const A = S.arc;
+  if (randomize) {
+    A.r = clamp(+$('setArcR').value || 15, 4, 40);
+    const d = $('setArcDir').value;
+    A.dir = d === 'cw' ? 1 : d === 'ccw' ? -1 : (Math.random() < 0.5 ? 1 : -1);
+    const s = $('setArcSweep').value;
+    A.sweep = s === 'any' ? 50 + Math.floor(Math.random() * 10) * 10 : +s;
+    A.startRadial = Math.floor(Math.random() * 360);
+    A.endRadial = n360(A.startRadial + A.dir * A.sweep);
+    const e = $('setArcEntry').value;
+    A.entry = e === 'any' ? (Math.random() < 0.6 ? 'outbound' : 'inbound') : e;
+    S.vor = VORS[Math.floor(Math.random() * VORS.length)];
+    S.call = CALLS[Math.floor(Math.random() * CALLS.length)];
+    S.efcMin = 20 + Math.floor(Math.random() * 25);
+    if (S.randWind) {
+      S.wind.dir = Math.floor(Math.random() * 36) * 10;
+      S.wind.spd = Math.floor(Math.random() * 26);
+      $('setWdir').value = S.wind.dir; $('setWspd').value = S.wind.spd;
+    }
+  }
+  /* The arc is flown on the green needle, and the final course is what the
+     hold code calls the inbound — so the shared course drawing, the OBS snap
+     and the map all key off it without knowing anything about arcs. */
+  setLeg(60);
+  S.fixDme = 0; S.fixRadial = A.endRadial; S.radial = A.endRadial;
+  repositionArc();
+  buildArcClearance();
+}
+
+function resetHoldStats() {
+  S.hold = { legStart: null, legD0: 0, devSum: 0, devN: 0, devMax: 0, wrong: 0,
+             entryWatch: false, entryLevel: 0, entryDue: 0, entryFlown: null,
+             prompted: false, assisted: false };
+}
+
+function resetArcStats() {
+  const A = S.arc;
+  A.phase = 'intercept'; A.err = 0; A.maxErr = 0; A.sumErr = 0; A.tSamp = 0;
+  A.turnRadial = null; A.lastTan = null; A.inTol = 0; A.assisted = false;
+  A.xtkMax = 0; A.xtkSum = 0; A.xtkT = 0;
+}
+
+/* A new run at the same arc: you always arrive on the intercept radial, since
+   that radial is the only way anyone navigates to a point on an arc. */
+function repositionArc() {
+  closeEntryPrompt(true);
+  const A = S.arc;
+  const out = A.entry === 'outbound';
+  const d = out ? Math.max(1.5, A.r - (4 + Math.random() * 3))
+                : A.r + 5 + Math.random() * 4;
+  S.ac.x = d * Math.sin(A.startRadial * RAD);
+  S.ac.y = d * Math.cos(A.startRadial * RAD);
+  S.ac.hdg = n360((out ? A.startRadial : A.startRadial + 180) + (Math.random() * 6 - 3));
+  S.ac.turn = 0; S.turnCmd = 0; S.latch = 0;
+  S.obs = out ? A.startRadial : n360(A.startRadial + 180);   // tuned to the radial you are on
+  S.bug = Math.round(S.ac.hdg);
+  S.crumbs = []; S.crossings = []; S.lastCrossT = null; S.elapsed = 0;
+  S.prevDist = null; S.crossCool = 0; S.maxDme = 0;
+  S.call_entry = null; S.answer = null;
+  S.timer.t = 0; S.timer.run = false; S.gyroErr = 0;
+  S.zoom = clamp(150 / (A.r + 5), 4, 60);
+  resetHoldStats(); resetArcStats();
+  S.startState = { x: S.ac.x, y: S.ac.y, hdg: S.ac.hdg, obs: S.obs, bug: S.bug, zoom: S.zoom };
+  navInit(); renderVerdict(); renderLaps(); renderScore(); syncEntryBtns();
+}
+
+/* Scoring. Deviation is only counted once you are actually established on the
+   arc, and the turn inbound is judged by the radial you were on when you left
+   the tangent, not by where you happened to finish the turn. */
+function updArc(dt) {
+  const A = S.arc;
+  if (A.phase === 'done') return;
+  A.err = arcErrNow();
+  const tg = arcToGo();
+
+  if (A.phase === 'intercept') {
+    if (Math.abs(A.err) < 1.0 && Math.abs(n180(S.ac.hdg - arcTangent(radialOf()))) < 45) {
+      A.phase = 'arc'; renderVerdict();
+    }
+  } else if (A.phase === 'arc') {
+    A.maxErr = Math.max(A.maxErr, Math.abs(A.err));
+    A.sumErr += Math.abs(A.err) * dt; A.tSamp += dt;
+    if (Math.abs(A.err) <= TOL().arc) A.inTol += dt;      // the headline number
+    if (S.cheat || S.show.ideal) A.assisted = true;
+    if (Math.abs(n180(S.ac.hdg - arcTangent(radialOf()))) < 22) A.lastTan = radialOf();
+    const nearEnd = tg < 50 || tg > 320;                 // within reach of the lead radial
+    if (nearEnd && Math.abs(n180(S.ac.hdg - inbound())) < 40) {
+      A.turnRadial = A.lastTan === null ? radialOf() : A.lastTan;
+      A.phase = 'inbound'; renderVerdict(); renderScore();
+    }
+  } else if (A.phase === 'inbound') {
+    const x = xtkFinal();
+    A.xtkMax = Math.max(A.xtkMax, Math.abs(x));
+    A.xtkSum += Math.abs(x) * dt; A.xtkT += dt;
+    if (dme() < 1.5) { A.phase = 'done'; renderVerdict(); }
+    renderScore();
+  }
+}
+
+function renderArcVerdict() {
+  const A = S.arc, el = $('verdict');
+
+  if (A.phase === 'intercept' || A.phase === 'arc') {
+    const head = A.phase === 'intercept'
+      ? `Track the <b>R-${pad3(A.startRadial)}</b> ${A.entry === 'outbound' ? 'outbound' : 'inbound'} and turn ${arcOntoTurn()} onto the arc as <b>${A.r.toFixed(1)} DME</b> comes up.`
+      : `On the arc. Hold <b>${A.r.toFixed(1)} DME</b> round to the <b>R-${pad3(A.endRadial)}</b>, then turn inbound on <b>${pad3(inbound())}</b>.`;
+    const tip = A.phase === 'intercept'
+      ? `Lead the turn by about ${turnRadius().toFixed(1)} NM — half the turn radius is the usual rule at these speeds — and roll out with the station on the ${A.dir > 0 ? 'right' : 'left'} wing tip.`
+      : `Twist the OBS ten degrees ahead of yourself, hold the heading until the needle centres, then turn ten degrees and twist again. Outside the arc, turn toward the station; inside it, turn away.`;
+    const cheat = S.cheat
+      ? `<span class="how">No-wind arc heading from here ${pad3(arcTangent(radialOf()))}. Start the turn inbound at about R-${pad3(n360(A.endRadial - A.dir * leadAngle()))}, ${leadAngle().toFixed(1)}&deg; of lead.</span>`
+      : '';
+    el.innerHTML = `<div class="verdict info">${head}<span class="how">${tip}</span>${cheat}</div>`;
+    return;
+  }
+
+  const avg = A.tSamp ? A.sumErr / A.tSamp : 0;
+  const inPct = A.tSamp ? Math.round(100 * A.inTol / A.tSamp) : 0;
+  const te = A.turnRadial === null ? null : A.dir * n180(A.turnRadial - A.endRadial);
+  el.innerHTML =
+    `<div class="verdict ${inPct >= 80 && A.maxErr < TOL().arc * 1.5 ? 'ok' : 'no'}">
+      ${A.phase === 'done' ? 'Arc and final course flown' : 'Turned inbound'} &mdash; you held the arc
+      within tolerance for <b>${inPct}%</b> of it, averaging ${avg.toFixed(2)} NM off.
+      ${te === null ? '' : `<span class="how">Left the arc off R-${pad3(A.turnRadial)}, ${Math.abs(te).toFixed(0)}&deg; ${te < 0 ? 'before' : 'past'} the R-${pad3(A.endRadial)}; the lead here is ${leadAngle().toFixed(1)}&deg;.</span>`}
+      <span class="how">The breakdown is on the card below.</span></div>`;
 }
 
 /* ============================ sim loop ============================ */
@@ -1124,6 +1610,7 @@ function frame(now) {
   dt = Math.min(dt, 0.1) * S.rate * (S.ff ? S.ffMult : 1);
   try {
     if (!S.paused) step(dt);
+    if (S.menu || S.setup) return;   // an overlay covers the screen; drawing under it is wasted
     draw();
   } catch (err) {
     if (!S.reported) { S.reported = true; showFatal('Render', err); }
@@ -1131,9 +1618,6 @@ function frame(now) {
 }
 
 function step(dt) {
-  /* Commanded from the turn still to go, not from the shortest way round, so
-     winding the knob left through 270 flies a left 270 rather than a right 90. */
-  if (S.eq.ap && S.ap.on) S.turnCmd = clamp(S.ap.togo / 12, -1, 1);
   // roll in / roll out toward the commanded rate
   const target = S.turnCmd * requiredTurnRate();
   const rollRate = 3.5;
@@ -1142,11 +1626,6 @@ function step(dt) {
 
   const turningNow = Math.abs(S.ac.turn) > 0.15;
   S.ac.hdg = n360(S.ac.hdg + S.ac.turn * dt);
-  if (S.eq.ap && S.ap.on) {
-    S.ap.togo -= S.ac.turn * dt;
-    // inside half a circle the remaining turn is unambiguous, so track it exactly
-    if (Math.abs(S.ap.togo) < 175) S.ap.togo = n180(S.ap.hdg - S.ac.hdg);
-  }
 
   const g = gsVec();
   S.ac.x += g.x * dt; S.ac.y += g.y * dt;
@@ -1176,11 +1655,81 @@ function step(dt) {
   if (S.autoTimer && S.wasTurning && !turningNow) { S.timer.t = 0; S.timer.run = true; }
   S.wasTurning = turningNow;
 
+  if (S.mode === 'arc') { updArc(dt); return; }
+  updHold(dt);
+
   // fix crossing detection
   const d = fixDist();
   S.maxDme = Math.max(S.maxDme, d);
   if (S.prevDist !== null && d < 1.5 && d > S.prevDist && S.crossCool <= 0) onCross();
   S.prevDist = d;
+}
+
+/* Watches the inbound leg and the protected side. The leg clock runs only while
+   you are established — inside 25 degrees of the inbound course — so a lap where
+   you never settle scores no leg time rather than a flattering one. */
+function updHold(dt) {
+  const H = S.hold;
+  if (S.cheat || S.show.ideal) H.assisted = true;
+
+  const established = Math.abs(n180(S.ac.hdg - inbound())) < 25;
+  if (established) {
+    if (H.legStart === null) { H.legStart = S.elapsed; H.legD0 = fixDist(); H.devSum = 0; H.devN = 0; H.devMax = 0; }
+    const dev = Math.min(Math.abs(devNow().raw) / 10, 1.2);   // fraction of full scale
+    H.devSum += dev * dt; H.devN += dt; H.devMax = Math.max(H.devMax, dev);
+  } else H.legStart = null;
+
+  /* Protected airspace, from the second crossing on: the entry lap is allowed
+     the non-holding side, because a parallel entry is flown there on purpose. */
+  if (S.crossings.length >= 2) {
+    const x = xtkHold();
+    if (Math.abs(x) > 0.5 && Math.sign(x) !== holdSideSign()) H.wrong += dt;
+  }
+
+  /* What you actually flew after the fix, which is not always what you called.
+     Sampled at the first steady wings-level after the crossing. */
+  if (H.entryWatch) {
+    H.entryLevel = Math.abs(S.ac.turn) < 0.15 ? H.entryLevel + dt : 0;
+    if (H.entryLevel > 4 || S.elapsed > H.entryDue) {
+      H.entryWatch = false;
+      H.entryFlown = classifyFlown();
+      renderVerdict();
+    }
+  }
+}
+
+function classifyFlown() {
+  const h = S.ac.hdg, x = xtkHold();
+  const onHoldSide = Math.sign(x) === holdSideSign() || Math.abs(x) < 0.4;
+  if (Math.abs(n180(h - teardropHdg())) < 20 && onHoldSide) return 'teardrop';
+  if (Math.abs(n180(h - outbound())) < 30) return onHoldSide ? 'direct' : 'parallel';
+  return null;                       // nothing clear enough to mark either way
+}
+
+/* The lap card. Built at the crossing that ends the lap, from what was measured
+   on the way round. */
+function scoreLap() {
+  const H = S.hold, T = TOL(), rnav = isRnav();
+  let legErr = null, legVal = '\u2014', legTol = rnav ? T.legD : T.legT, legLbl;
+  if (H.legStart !== null) {
+    if (rnav) { legErr = H.legD0 - S.legNm; legVal = H.legD0.toFixed(1) + ' NM'; }
+    else { const t = S.elapsed - H.legStart; legErr = t - S.legSec; legVal = mmss(t); }
+  }
+  legLbl = rnav ? `Inbound leg (${S.legNm} NM)` : `Inbound leg (${mmss(S.legSec)})`;
+  const dev = H.devN ? H.devSum / H.devN : null;
+  return { legErr, legVal, legLbl, legTol, dev, devMax: H.devN ? H.devMax : null, wrong: H.wrong };
+}
+
+function lapItems(c) {
+  const T = TOL();
+  return [
+    item(c.legLbl, c.legVal + (c.legErr === null ? '' :
+         ` (${c.legErr >= 0 ? '+' : '\u2212'}${isRnav() ? Math.abs(c.legErr).toFixed(1) : Math.round(Math.abs(c.legErr)) + ' s'})`),
+         c.legErr, c.legTol, 1.2),
+    item('Fix crossing', `${c.err >= 0 ? 'R' : 'L'} ${Math.abs(c.err).toFixed(2)} NM`, c.err, T.miss, 1),
+    item('Course held', c.dev === null ? '\u2014' : `${c.dev.toFixed(2)} scale`, c.dev, T.dev, 1),
+    item('Non-holding side', `${Math.round(c.wrong)} s`, c.wrong, T.wrong, 0.6)
+  ];
 }
 
 function onCross() {
@@ -1191,16 +1740,26 @@ function onCross() {
     if (S.call_entry) renderVerdict();
     else openEntryPrompt();          // no call: freeze here and make them commit
   }
-  const lap = S.lastCrossT === null ? null : S.elapsed - S.lastCrossT;
+  const H = S.hold;
+  const first = S.lastCrossT === null;
+  const lap = first ? null : S.elapsed - S.lastCrossT;
   S.lastCrossT = S.elapsed;
   const rgt = { x: Math.sin((inbound() + 90) * RAD), y: Math.cos((inbound() + 90) * RAD) };
   const Fx = fixPos();
   const miss = (S.prevDist === null ? 0 : S.prevDist) *
                Math.sign((S.ac.x - Fx.x) * rgt.x + (S.ac.y - Fx.y) * rgt.y || 1);
-  S.crossings.push({ n: S.crossings.length + 1, lap, hdg, err: miss, max: S.maxDme });
+
+  const c = Object.assign({ n: S.crossings.length + 1, lap, hdg, err: miss, max: S.maxDme },
+                          scoreLap());
+  /* The arrival at the fix is not a lap of the pattern, so it is recorded but
+     not graded — there was no leg of ours to fly before it. */
+  c.score = first ? null : overall(lapItems(c));
+  S.crossings.push(c);
   S.maxDme = 0;
+  H.wrong = 0; H.legStart = null; H.devN = 0; H.devSum = 0; H.devMax = 0;
+  if (first) { H.entryWatch = true; H.entryLevel = 0; H.entryDue = S.elapsed + 90; }
   if (S.autoTimer) { S.timer.t = 0; S.timer.run = true; }
-  renderLaps();
+  renderLaps(); renderScore();
 }
 
 /* ============================ map drawing ============================ */
@@ -1209,7 +1768,6 @@ const hsiCv = $('hsi'), hctx = hsiCv.getContext('2d');
 const dgCv  = $('dg'),  dctx = dgCv.getContext('2d');
 const tcCv  = $('tc'),  tctx = tcCv.getContext('2d');
 const aiCv  = $('ai'),  aictx = aiCv.getContext('2d');
-const apCv  = $('ap'),  actx = apCv.getContext('2d');
 const secCv = $('sector'), sctx = secCv.getContext('2d');
 
 function fit(cv, ctx) {
@@ -1308,7 +1866,31 @@ function drawMap() {
     mctx.fillText((isRnav() ? 'BRG ' : 'R-') + pad3(S.radial), X({x:lx}), Y({y:ly}) - 10);
   }
 
-  if (S.show.ideal) {
+  if (S.mode === 'arc' && S.show.course) {
+    const A = S.arc, sx = X({ x: 0 }), sy = Y({ y: 0 }), rr = A.r * ppn;
+    // the whole circle faint, the assigned segment solid
+    mctx.strokeStyle = '#1f1f1f'; mctx.lineWidth = 1; mctx.setLineDash([3, 6]);
+    mctx.beginPath(); mctx.arc(sx, sy, rr, 0, Math.PI * 2); mctx.stroke(); mctx.setLineDash([]);
+    mctx.strokeStyle = '#7d7d7d'; mctx.lineWidth = 2;
+    mctx.beginPath();
+    mctx.arc(sx, sy, rr, (A.startRadial - 90) * RAD, (A.endRadial - 90) * RAD, A.dir < 0);
+    mctx.stroke();
+    // the radial you intercept it from
+    const e = { x: (A.r + 3) * Math.sin(A.startRadial * RAD), y: (A.r + 3) * Math.cos(A.startRadial * RAD) };
+    mctx.strokeStyle = '#5c5c5c'; mctx.lineWidth = 1.2; mctx.setLineDash([6, 6]);
+    mctx.beginPath(); mctx.moveTo(sx, sy); mctx.lineTo(X(e), Y(e)); mctx.stroke(); mctx.setLineDash([]);
+    mctx.fillStyle = '#8f8f8f'; mctx.font = '11px ui-monospace,monospace';
+    mctx.textAlign = 'center'; mctx.textBaseline = 'middle';
+    mctx.fillText('R-' + pad3(A.startRadial), X(e), Y(e) - 10);
+    // lead radial for the turn inbound
+    const lr = n360(A.endRadial - A.dir * leadAngle());
+    const p0 = { x: (A.r - 1.2) * Math.sin(lr * RAD), y: (A.r - 1.2) * Math.cos(lr * RAD) };
+    const p1 = { x: (A.r + 1.2) * Math.sin(lr * RAD), y: (A.r + 1.2) * Math.cos(lr * RAD) };
+    mctx.strokeStyle = '#c8a04a'; mctx.lineWidth = 1.6;
+    mctx.beginPath(); mctx.moveTo(X(p0), Y(p0)); mctx.lineTo(X(p1), Y(p1)); mctx.stroke();
+  }
+
+  if (S.show.ideal && S.mode !== 'arc') {
     const pts = idealPattern();
     mctx.strokeStyle = '#3d3d3d'; mctx.lineWidth = 1.2; mctx.setLineDash([4, 5]);
     mctx.beginPath();
@@ -1316,13 +1898,17 @@ function drawMap() {
     mctx.stroke(); mctx.setLineDash([]);
   }
 
-  if (S.show.crumbs) {
+  if (S.show.crumbs && S.crumbs.length) {
+    // one path, one fill: a few thousand separate fillRect calls is the most
+    // expensive thing on the map and none of it needs its own state change
     mctx.fillStyle = '#8f8f8f';
-    for (const c of S.crumbs) {
-      const px = X(c), py = Y(c);
+    mctx.beginPath();
+    for (let i = 0; i < S.crumbs.length; i++) {
+      const px = X(S.crumbs[i]), py = Y(S.crumbs[i]);
       if (px < -20 || px > w + 20 || py < -20 || py > h + 20) continue;
-      mctx.fillRect(px - 1, py - 1, 2, 2);
+      mctx.rect(px - 1, py - 1, 2, 2);
     }
+    mctx.fill();
   }
 
   if (S.show.fix) {
@@ -1393,17 +1979,18 @@ function drawMap() {
   }
 
   const g = gsVec(), gs = Math.hypot(g.x, g.y) * 3600;
-  $('coneTxt').textContent = `\u2248 ${coneR().toFixed(2)} NM radius, station at ${90 - S.coneAng}\u00b0 elevation, about ${Math.round(2 * coneR() / (gs || 1) * 3600)} s to cross`;
-  $('mapText').innerHTML =
+  setTxt('coneTxt', `\u2248 ${coneR().toFixed(2)} NM radius, station at ${90 - S.coneAng}\u00b0 elevation, about ${Math.round(2 * coneR() / (gs || 1) * 3600)} s to cross`);
+  setHtml('mapText',
     `${pad3(S.ac.hdg)}&deg; HDG &nbsp; ${Math.round(gs)} KT GS<br>` +
     `R-${pad3(radialOf())} &nbsp; ${dme().toFixed(1)} DME<br>` +
-    (S.fixDme ? `${fixDist().toFixed(1)} NM to fix<br>` : '') +
+    (S.fixDme && S.mode !== 'arc' ? `${fixDist().toFixed(1)} NM to fix<br>` : '') +
+    (S.mode === 'arc'
+      ? `${arcErrNow() >= 0 ? '+' : '\u2212'}${Math.abs(arcErrNow()).toFixed(2)} NM off the ${S.arc.r.toFixed(0)} arc<br>` : '') +
     (S.paused ? '<br><span style="color:#e2564f">PAUSED</span>'
-     : S.ff ? '<br><span style="color:#46c98b">FAST FWD ' + S.ffMult + '&times;</span>' : '');
+     : S.ff ? '<br><span style="color:#46c98b">FAST FWD ' + S.ffMult + '&times;</span>' : ''));
 }
 
 /* ============================ HSI ============================ */
-const MONO = 'ui-monospace,"SF Mono",Menlo,Consolas,monospace';
 const COND = '"Roboto Condensed","Arial Narrow",system-ui,sans-serif';
 const GRN = '#35c757', MAG = '#e15be8', CYN = '#22c8e8', AMB = '#f0c243';
 
@@ -1555,7 +2142,7 @@ function drawCDIHead() {
     c.fillText(N.tf > 0 ? 'TO' : 'FROM', 0, F * 0.006);
     c.restore();
   }
-  if (N.flag > 0.02) {                     // red flag pulled in by its spring
+  if (N.flag > 0.02 && navSrc() !== 'gps') {   // red flag pulled in by its spring
     const t = clamp(N.flag, 0, 1);
     c.save(); c.globalAlpha = clamp(t * 1.5, 0, 1);
     c.translate(0, (1 - t) * -F * 0.28); c.rotate((1 - t) * 0.4);
@@ -1574,9 +2161,24 @@ function drawCDIHead() {
   c.save(); c.rotate(Math.PI / 2); c.fillText('GS', 0, 0); c.restore();
   c.restore();
 
-  c.fillStyle = '#8d949a'; c.font = `600 ${F * 0.085}px ${COND}`;
-  c.textAlign = 'right'; c.textBaseline = 'middle';
-  c.fillText('VOR / LOC', F * 0.74, F * 0.60);
+  /* Source annunciator. On a real panel this is the GPS/VLOC lamp on the
+     navigator, or an annunciator wired above the head; either way it is the
+     only thing on the instrument that tells you what the needle means. */
+  const gpsSrc = navSrc() === 'gps';
+  c.save();
+  c.translate(F * 0.30, F * 0.60);
+  c.fillStyle = gpsSrc ? '#2a1230' : '#101314';
+  roundRect(c, -F * 0.30, -F * 0.105, F * 0.60, F * 0.21, F * 0.02); c.fill();
+  c.strokeStyle = gpsSrc ? '#7b3f86' : '#2a2e32'; c.lineWidth = 1; c.stroke();
+  c.fillStyle = gpsSrc ? MAG : '#8d949a'; c.font = `600 ${F * 0.10}px ${COND}`;
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText(gpsSrc ? 'GPS' : 'VOR / LOC', 0, F * 0.004);
+  c.restore();
+  if (gpsSrc) {                            // full scale is a distance now, not an angle
+    c.fillStyle = '#7d6a84'; c.font = `600 ${F * 0.075}px ${COND}`;
+    c.textAlign = 'left'; c.textBaseline = 'middle';
+    c.fillText(S.gpsScale.toFixed(2).replace(/0$/, '') + ' NM', -F * 0.74, F * 0.60);
+  }
 
   knob(c, -S0 * 0.385, S0 * 0.385, S0 * 0.062, 'OBS');
   S.hitObs = { x: w / 2 - S0 * 0.385, y: h / 2 + S0 * 0.385, r: S0 * 0.062 };
@@ -1776,112 +2378,6 @@ function drawG5() {
     c.fillText('NAV', 0, -RD * 0.30);
   }
   c.restore();
-}
-
-/* ---------------- heading autopilot ---------------- */
-const SEG7 = { '0':'abcdef','1':'bc','2':'abged','3':'abcdg','4':'fgbc','5':'afgcd',
-               '6':'afgcde','7':'abc','8':'abcdefg','9':'abcdfg','-':'g',' ':'' };
-
-/* one seven-segment digit, unlit bars left faintly visible like the real thing */
-function digit7(c, x, y, w, h, ch, lit, dim) {
-  const on = SEG7[ch] || '', t = h * 0.155, m = t * 0.55;
-  const bar = (cx, cy, len, vert) => {
-    const a = len / 2, b = t / 2;
-    const pts = vert
-      ? [[0,-a],[b,-a+b],[b,a-b],[0,a],[-b,a-b],[-b,-a+b]]
-      : [[-a,0],[-a+b,-b],[a-b,-b],[a,0],[a-b,b],[-a+b,b]];
-    c.beginPath();
-    pts.forEach(([px, py], i) => i ? c.lineTo(cx + px, cy + py) : c.moveTo(cx + px, cy + py));
-    c.closePath(); c.fill();
-  };
-  const draw = (name, cx, cy, len, vert) => {
-    const isOn = on.includes(name);
-    c.save();
-    c.fillStyle = isOn ? lit : dim;
-    if (isOn) { c.shadowColor = lit; c.shadowBlur = t * 1.4; }
-    bar(cx, cy, len, vert);
-    c.restore();
-  };
-  const hl = w - t, vl = (h - t) / 2;
-  draw('a', x + w / 2,     y + t / 2,             hl, false);
-  draw('g', x + w / 2,     y + h / 2,             hl, false);
-  draw('d', x + w / 2,     y + h - t / 2,         hl, false);
-  draw('f', x + t / 2,     y + t / 2 + vl / 2,    vl - m, true);
-  draw('b', x + w - t / 2, y + t / 2 + vl / 2,    vl - m, true);
-  draw('e', x + t / 2,     y + h / 2 + vl / 2,    vl - m, true);
-  draw('c', x + w - t / 2, y + h / 2 + vl / 2,    vl - m, true);
-}
-
-function arrowLed(c, x, y, r, on, dir) {
-  const col = '#3ee07a';
-  c.save();
-  if (on) { c.shadowColor = col; c.shadowBlur = r * 2.2; }
-  c.fillStyle = on ? col : '#16211a';
-  c.beginPath();
-  c.moveTo(x + dir * r, y); c.lineTo(x - dir * r * 0.7, y - r * 0.85); c.lineTo(x - dir * r * 0.7, y + r * 0.85);
-  c.closePath(); c.fill();
-  c.restore();
-}
-
-function drawAP() {
-  if (!S.eq.ap) return;
-  const f = fit(apCv, actx); if (!f.ok) return;
-  const { w, h } = f, c = actx;
-  c.clearRect(0, 0, w, h);
-
-  // case
-  const g = c.createLinearGradient(0, 0, 0, h);
-  g.addColorStop(0, '#2a2f34'); g.addColorStop(1, '#14181b');
-  c.fillStyle = g; roundRect(c, 1, 1, w - 2, h - 2, h * 0.12); c.fill();
-  c.strokeStyle = '#08090a'; c.lineWidth = 1.5; c.stroke();
-  const sr = h * 0.045;
-  for (const [sx, sy] of [[h * 0.14, h * 0.16], [w - h * 0.14, h * 0.16],
-                          [h * 0.14, h - h * 0.16], [w - h * 0.14, h - h * 0.16]]) screw(c, sx, sy, sr);
-
-  c.textAlign = 'center'; c.textBaseline = 'middle';
-  c.fillStyle = '#79828a'; c.font = `600 ${h * 0.11}px ${COND}`;
-  c.fillText('AUTOPILOT', w * 0.50, h * 0.13);
-
-  // power rocker
-  const px = w * 0.135, py = h * 0.55, pw = w * 0.085, ph = h * 0.40;
-  c.fillStyle = '#0d1012'; roundRect(c, px - pw / 2, py - ph / 2, pw, ph, pw * 0.22); c.fill();
-  c.strokeStyle = '#000'; c.lineWidth = 1; c.stroke();
-  const lev = c.createLinearGradient(0, py - ph / 2, 0, py + ph / 2);
-  if (S.ap.on) { lev.addColorStop(0, '#1d2226'); lev.addColorStop(1, '#3c444b'); }
-  else         { lev.addColorStop(0, '#3c444b'); lev.addColorStop(1, '#1d2226'); }
-  c.fillStyle = lev;
-  const ly = S.ap.on ? py : py - ph * 0.24;
-  roundRect(c, px - pw / 2 + 2, ly - ph * 0.22, pw - 4, ph * 0.46, pw * 0.18); c.fill();
-  c.fillStyle = S.ap.on ? '#3ee07a' : '#4a5359';
-  c.font = `700 ${h * 0.10}px ${COND}`;
-  c.fillText(S.ap.on ? 'ON' : 'OFF', px, py + ph * 0.72);
-  S.hitApPwr = { x: px, y: py, r: Math.max(pw, ph) * 0.6 };
-
-  // seven segment heading window
-  const dw = w * 0.085, dh = h * 0.42, gap = dw * 0.30;
-  const total = dw * 3 + gap * 2, dx0 = w * 0.455 - total / 2, dy0 = h * 0.30;
-  c.fillStyle = '#080607';
-  roundRect(c, dx0 - dw * 0.35, dy0 - dh * 0.18, total + dw * 0.7, dh * 1.36, dw * 0.16); c.fill();
-  c.strokeStyle = '#000'; c.lineWidth = 1; c.stroke();
-  const txt = S.ap.on ? pad3(S.ap.hdg) : '   ';
-  for (let i = 0; i < 3; i++)
-    digit7(c, dx0 + i * (dw + gap), dy0, dw, dh, txt[i], '#ff4a22', '#26100b');
-  c.fillStyle = '#79828a'; c.font = `600 ${h * 0.10}px ${COND}`;
-  c.fillText('HEADING', w * 0.455, h * 0.87);
-
-  // turn annunciators, showing the way it is commanding
-  const err = S.ap.on ? S.ap.togo : 0;
-  const lr = h * 0.085, ly2 = h * 0.50;
-  arrowLed(c, w * 0.655, ly2, lr, S.ap.on && err < -0.7, -1);
-  arrowLed(c, w * 0.735, ly2, lr, S.ap.on && err >  0.7,  1);
-  c.fillStyle = '#5c666e'; c.font = `600 ${h * 0.085}px ${COND}`;
-  c.fillText('L', w * 0.655, ly2 + lr * 2.3);
-  c.fillText('R', w * 0.735, ly2 + lr * 2.3);
-
-  // heading knob
-  const kx = w * 0.885, ky = h * 0.50, kr = h * 0.28;
-  encoderKnob(c, kx, ky, kr, S.ap.knob);
-  S.hitApKnob = { x: kx, y: ky, r: kr };
 }
 
 /* ---------------- attitude indicator ---------------- */
@@ -2086,7 +2582,20 @@ function drawTC() {
    space. Try every column count and take whichever makes the faces biggest: a
    single row wastes most of the height, and with four fitted a 2x2 grid is
    nearly half as large again. */
+/* Measuring forces the browser to lay the page out, so it is done when
+   something that could change the answer happens rather than every frame: a
+   resize, a rotation, a panel opening, a gauge going in or out. The timed
+   recheck is a safety net for anything that moves the layout without telling
+   us, and it is cheap at twice a second. */
+let layoutDue = true, layoutT = 0;
+const markLayout = () => { layoutDue = true; };
+addEventListener('resize', markLayout);
+addEventListener('orientationchange', markLayout);
+
 function layoutInstruments() {
+  const now = performance.now();
+  if (!layoutDue && now - layoutT < 500) return;
+  layoutDue = false; layoutT = now;
   /* Measure the space from the column, not from the box: we cap the box's own
      width below, and reading that back would feed our own answer into the next
      frame's calculation. */
@@ -2095,7 +2604,7 @@ function layoutInstruments() {
   const boxRect = boxEl.getBoundingClientRect();
   const availW = Math.max(80, colRect.width - 2);
   const availH = Math.max(80, boxRect.height);
-  if (!isFinite(availW) || !isFinite(availH)) return;
+  if (!isFinite(availW) || !isFinite(availH)) { layoutDue = true; return; }
   const gap = 10;
   const mech = S.hsiStyle === 'mech';
 
@@ -2123,27 +2632,18 @@ function layoutInstruments() {
 
   // pin the wrap point, or flex decides it from whatever width is going spare
   boxEl.style.maxWidth = (bestCols * size + (bestCols - 1) * gap) + 'px';
-
-  const apw = $('apWrap');
-  if (S.eq.ap) {
-    apw.style.display = 'block';
-    const col = $('instCol').getBoundingClientRect();
-    const aw = Math.max(220, Math.min(col.width - 4, 470));
-    apCv.style.width  = Math.round(aw) + 'px';
-    apCv.style.height = Math.round(aw / 3.5) + 'px';
-  } else apw.style.display = 'none';
 }
 
 function drawHSI() {
   layoutInstruments();
   if (S.hsiStyle === 'g5') drawG5();
   else { drawCDIHead(); drawDG(); }
-  drawAP(); drawTC(); drawAI();
+  drawTC(); drawAI();
 }
 
 /* ============================ entry sector diagram ============================ */
 function drawSector() {
-  if (!S.cheat && !S.answer) { $('sectorWrap').style.display = 'none'; return; }
+  if (S.mode === 'arc' || (!S.cheat && !S.answer)) { $('sectorWrap').style.display = 'none'; return; }
   $('sectorWrap').style.display = 'flex';
   const f = fit(secCv, sctx);
   if (!f.ok) return;                       // panel collapsed, nothing to draw into
@@ -2188,43 +2688,60 @@ function drawSector() {
 /* ============================ readouts ============================ */
 function draw() {
   drawMap(); drawHSI(); drawSector();
-  $('rHdg').textContent = pad3(dgHdg());
-  $('rObs').textContent = pad3(S.obs);
-  if (document.activeElement !== $('setObs')) $('setObs').value = Math.round(n360(S.obs)) % 360;
-  if (document.activeElement !== $('setBug')) $('setBug').value = Math.round(n360(S.bug)) % 360;
-  $('rRad').textContent = pad3(radialOf());
-  $('rDme').textContent = dme().toFixed(1);
-  $('rTimer').textContent = mmss(S.timer.t);
-  $('tState').textContent = touchOn() ? timerLbl() : (S.timer.run ? 'running' : 'stopped');
-  $('tbTime').textContent = mmss(S.timer.t);
-  $('tbTimerLbl').textContent = timerLbl();
-  $('tbTimer').classList.toggle('on', S.timer.run);
-  $('tbFF').classList.toggle('on', S.ff);
-  $('tbMult').textContent = '\u00d7' + S.ffMult;
-  $('tbL').classList.toggle('act', S.turnCmd < 0);
-  $('tbR').classList.toggle('act', S.turnCmd > 0);
-  $('timerBox').classList.toggle('run', S.timer.run);
-  const tgt = S.legNm ? `${S.legNm} NM legs` : `${mmss(S.legSec)} legs`;
-  $('lapInfo').textContent = tgt;
+  setTxt('rHdg', pad3(dgHdg()));
+  setTxt('rObs', pad3(S.obs));
+  if (document.activeElement !== el('setObs')) el('setObs').value = Math.round(n360(S.obs)) % 360;
+  if (document.activeElement !== el('setBug')) el('setBug').value = Math.round(n360(S.bug)) % 360;
+  setTxt('rRad', pad3(radialOf()));
+  setTxt('rDme', dme().toFixed(1));
+  const clock = mmss(S.timer.t);
+  setTxt('rTimer', clock);
+  setTxt('tState', touchOn() ? timerLbl() : (S.timer.run ? 'running' : 'stopped'));
+  setTxt('tbTime', clock);
+  setTxt('tbTimerLbl', timerLbl());
+  setCls('tbTimer', 'on', S.timer.run);
+  setCls('tbFF', 'on', S.ff);
+  setTxt('tbMult', '\u00d7' + S.ffMult);
+  setCls('tbL', 'act', S.turnCmd < 0);
+  setCls('tbR', 'act', S.turnCmd > 0);
+  setCls('timerBox', 'run', S.timer.run);
+  setTxt('lapInfo', S.legNm ? `${S.legNm} NM legs` : `${mmss(S.legSec)} legs`);
+
+  if (S.mode === 'arc') {
+    const A = S.arc, err = arcErrNow(), a = Math.abs(err);
+    setTxt('arcErr', (err >= 0 ? '+' : '\u2212') + a.toFixed(2));
+    const col = a < 0.5 ? 'var(--grn)' : a < 1 ? 'var(--amb)' : 'var(--red)';
+    const ae = el('arcErr');
+    if (ae._c !== col) { ae._c = col; ae.style.color = col; }
+    setHtml('arcSub',
+      `${a < 0.05 ? 'on' : err > 0 ? 'outside' : 'inside'} the ${A.r.toFixed(1)} NM arc<br>` +
+      (A.phase === 'intercept' || A.phase === 'arc'
+        ? `${Math.round(arcToGo())}&deg; to run to R-${pad3(A.endRadial)}`
+        : `${dme().toFixed(1)} DME &middot; course ${pad3(inbound())}`) +
+      `<br><span style="color:var(--dim2)">${arcPhaseTxt()}</span>`);
+  }
 
   const g = gsVec(), gs = Math.hypot(g.x, g.y) * 3600;
+  const xtk = navSrc() === 'gps' ? gpsDev().xtk : null;
   const flag = S.paused ? '<span style="color:#e2564f">PAUSED</span>'
              : S.ff ? `<span style="color:#46c98b">FAST FWD ${S.ffMult}&times;</span>` : '';
-  $('stageStatus').innerHTML =
+  setHtml('stageStatus',
     `<span>GS ${Math.round(gs)} KT</span><span>TAS ${Math.round(S.ac.tas)} KT</span>` +
     (Math.abs(S.ac.turn) > 0.15
       ? `<span>${S.ac.turn > 0 ? 'R' : 'L'} ${Math.abs(S.ac.turn).toFixed(1)}&deg;/s`
-        + `${S.eq.ai ? ' · ' + Math.abs(bankAngle()).toFixed(0) + '&deg; bank' : ''}</span>`
+        + `${S.eq.ai ? ' \u00b7 ' + Math.abs(bankAngle()).toFixed(0) + '&deg; bank' : ''}</span>`
       : '') +
     (S.wind.spd ? `<span>WIND ${pad3(S.wind.dir)}/${S.wind.spd}</span>` : '') +
-    (S.hsiStyle === 'g5' && navSrc() === 'gps'
-      ? `<span>XTK ${Math.abs(gpsDev().xtk).toFixed(2)} NM ${gpsDev().xtk >= 0 ? 'R' : 'L'}</span>` : '') + flag;
-  const hs = $('hdrState');
-  hs.textContent = S.paused ? 'PAUSED' : S.ff ? 'FF ' + S.ffMult + '\u00d7' : '';
-  hs.style.color = S.paused ? 'var(--red)' : 'var(--grn)';
+    (xtk === null ? '' : `<span>XTK ${Math.abs(xtk).toFixed(2)} NM ${xtk >= 0 ? 'R' : 'L'}</span>`) +
+    flag);
+  setTxt('hdrState', S.paused ? 'PAUSED' : S.ff ? 'FF ' + S.ffMult + '\u00d7' : '');
+  const hcol = S.paused ? 'var(--red)' : 'var(--grn)';
+  const hs = el('hdrState');
+  if (hs._c !== hcol) { hs._c = hcol; hs.style.color = hcol; }
 }
 
 function renderVerdict() {
+  if (S.mode === 'arc') return renderArcVerdict();
   const el = $('verdict');
   if (!S.answer) {
     el.innerHTML = S.call_entry
@@ -2239,17 +2756,67 @@ function renderVerdict() {
     : ok ? `Correct — <b>${S.answer.rec.toUpperCase()}</b>`
          : `You called <b>${S.call_entry.toUpperCase()}</b>. Recommended: <b>${S.answer.rec.toUpperCase()}</b>`;
   const near = [110, 180, 290].some(b => Math.abs(n180(S.answer.rel - b)) < 5);
+  const flown = S.hold.entryFlown;
+  const flownTxt = !flown ? ''
+    : flown === S.answer.rec
+      ? `<span class="how">Flown as a <b>${flown}</b> entry, which is what was recommended.</span>`
+      : `<span class="how">You then flew it as a <b>${flown}</b>. Calling one entry and flying another is worth catching now: the call is only the plan.</span>`;
   el.innerHTML =
     `<div class="verdict ${cls}">${head}${near ? ' <span style="opacity:.8">(within 5&deg; of a sector boundary — either adjacent entry is acceptable)</span>' : ''}
       <span class="how">Crossed the fix on ${pad3(S.answer.hdg)}, ${Math.round(S.answer.rel)}&deg; from the inbound course ${pad3(inbound())} measured toward the ${S.turns === 'right' ? 'right' : 'left'}.</span>
-      <span class="how">${entryHow(S.answer.rec)}</span></div>`;
+      <span class="how">${entryHow(S.answer.rec)}</span>${flownTxt}</div>`;
 }
 
 function renderLaps() {
-  const tb = $('lapBody');
-  tb.innerHTML = S.crossings.slice(-8).map(c =>
-    `<tr><td>${c.n}</td><td>${c.lap === null ? '—' : mmss(c.lap)}</td><td>${pad3(c.hdg)}</td>` +
-    `<td>${(c.err >= 0 ? 'R ' : 'L ') + Math.abs(c.err).toFixed(2)}</td><td>${c.max.toFixed(1)}</td></tr>`).join('');
+  $('lapBody').innerHTML = S.crossings.slice(-8).map(c =>
+    `<tr><td>${c.n}</td><td>${c.legVal === undefined ? '\u2014' : c.legVal}</td>` +
+    `<td>${(c.err >= 0 ? 'R ' : 'L ') + Math.abs(c.err).toFixed(2)}</td>` +
+    `<td>${c.dev === null || c.dev === undefined ? '\u2014' : c.dev.toFixed(2)}</td>` +
+    `<td style="color:${gcol(c.score === undefined ? null : c.score)}">${c.score == null ? '\u2014' : c.score}</td></tr>`).join('');
+}
+
+/* The card under the verdict: the lap just flown, item by item, and the session
+   average underneath it. */
+/* Changing the difficulty re-grades what you have already flown, so the whole
+   session is always measured against one set of tolerances. */
+function regrade() {
+  S.crossings.forEach(c => { if (c.score !== null && c.score !== undefined) c.score = overall(lapItems(c)); });
+  renderLaps(); renderScore();
+}
+
+function renderScore() {
+  if (S.mode === 'arc') return renderArcScore();
+  const graded = S.crossings.filter(c => c.score !== null && c.score !== undefined);
+  if (!graded.length) { setHtml('scoreCard', ''); return; }
+  const c = graded[graded.length - 1];
+  const avg = Math.round(graded.reduce((a, x) => a + x.score, 0) / graded.length);
+  const T = TOL();
+  const notes = [];
+  if (S.hold.entryFlown && S.answer && S.hold.entryFlown !== S.answer.rec)
+    notes.push(`Flew a <b>${S.hold.entryFlown}</b> entry off the fix where a ${S.answer.rec} was recommended.`);
+  notes.push(`${T.name} tolerances \u00b7 ${graded.length} lap${graded.length > 1 ? 's' : ''} graded, session ${avg}. Lateral and timing only.`);
+  if (S.hold.assisted) notes.push('Practice run \u2014 an overlay that shows the answer was on.');
+  setHtml('scoreCard', scoreBlock(`Lap ${c.n - 1}`, c.score, lapItems(c), notes.join('<br>')));
+}
+
+function renderArcScore() {
+  const A = S.arc, T = TOL();
+  if (A.phase === 'intercept' || !A.tSamp) { setHtml('scoreCard', ''); return; }
+  const inPct = Math.round(100 * A.inTol / A.tSamp);
+  const te = A.turnRadial === null ? null : A.dir * n180(A.turnRadial - A.endRadial);
+  const leadErr = te === null ? null : te + leadAngle();      // ideal is lead degrees early
+  const xtk = A.xtkT ? A.xtkSum / A.xtkT : null;
+  const items = [
+    item(`Inside \u00b1${T.arc.toFixed(2)} NM`, `${inPct}% of the arc`, (100 - inPct) / 100, 0.15, 1.4),
+    item('Worst excursion', `${A.maxErr.toFixed(2)} NM`, A.maxErr, T.arc * 1.5, 1),
+    item('Turn inbound', te === null ? '\u2014' :
+         `${Math.abs(te).toFixed(0)}\u00b0 ${te < 0 ? 'early' : 'late'}`, leadErr, T.lead, 1),
+    item('Final course', xtk === null ? '\u2014' : `${Math.abs(xtk).toFixed(2)} NM`, xtk, T.xtk, 0.8)
+  ];
+  const notes = [`${T.name} tolerances \u00b7 lead on this arc is ${leadAngle().toFixed(1)}\u00b0. Lateral only.`];
+  if (A.assisted) notes.push('Practice run \u2014 an overlay that shows the answer was on.');
+  setHtml('scoreCard', scoreBlock(A.phase === 'done' ? 'Arc complete' : 'Arc so far',
+                                  overall(items), items, notes.join('<br>')));
 }
 
 function syncEntryBtns() {
@@ -2261,7 +2828,6 @@ function syncEntryBtns() {
 const held = new Set();
 function applyTurn() {
   const h = (held.has('L') ? -1 : 0) + (held.has('R') ? 1 : 0);
-  if ((h !== 0 || S.latch) && S.ap.on) S.ap.on = false;   // hands on the controls kicks it out
   S.turnCmd = h !== 0 ? h : (S.latch || 0);      // a held control always wins over a latch
 }
 
@@ -2279,7 +2845,12 @@ addEventListener('keydown', e => {
   const k = e.code, sh = e.shiftKey;
   const stop = () => { e.preventDefault(); e.stopPropagation(); };
 
-  if (k === 'Escape') { $('help').classList.remove('show'); return; }
+  if (k === 'Escape') {
+    if ($('help').classList.contains('show')) { $('help').classList.remove('show'); return; }
+    if (S.setup) { closeSetup(true); return; }
+    if (S.menu && S.started) closeMenu();
+    return;
+  }
   if (k === 'KeyH') { stop(); $('help').classList.toggle('show'); return; }
 
   if (k === 'KeyA' || k === 'ArrowLeft') {
@@ -2293,7 +2864,7 @@ addEventListener('keydown', e => {
     applyTurn(); return;
   }
   if (k === 'Space') { stop(); S.ff = true; return; }
-  if (e.repeat && !['BracketLeft','BracketRight','Backslash','KeyP','Semicolon','Quote','Comma','Period','Minus','Equal'].includes(k)) return;
+  if (e.repeat && !['BracketLeft','BracketRight','Backslash','KeyP','Semicolon','Quote','Minus','Equal'].includes(k)) return;
 
   switch (k) {
     case 'KeyT': stop(); if (sh) { S.timer.t = 0; S.timer.run = true; } else S.timer.run = !S.timer.run; break;
@@ -2303,7 +2874,13 @@ addEventListener('keydown', e => {
     case 'BracketLeft':  stop(); S.obs = n360(S.obs - (sh ? 10 : 1)); break;
     case 'BracketRight': stop(); S.obs = n360(S.obs + (sh ? 10 : 1)); break;
     case 'Backslash':    stop(); S.obs = n360(S.obs + 10); break;
-    case 'KeyO': stop(); S.obs = inbound(); break;
+    /* On an arc the useful twist is the next ten degree radial ahead of you,
+       which is the whole technique; in a hold it is the inbound course. */
+    case 'KeyO': stop();
+      S.obs = S.mode === 'arc'
+        ? n360((Math.round(radialOf() / 10) + S.arc.dir) * 10)
+        : inbound();
+      break;
     case 'Semicolon': stop(); S.bug = n360(S.bug - (sh ? 10 : 1)); break;
     case 'Quote':     stop(); S.bug = n360(S.bug + (sh ? 10 : 1)); break;
     case 'KeyK': stop(); if (sh) alignDG(); else S.bug = Math.round(dgHdg()); break;
@@ -2312,15 +2889,16 @@ addEventListener('keydown', e => {
     case 'Digit3': stop(); setEntry('teardrop'); break;
     case 'Enter': stop(); if (S.hsiStyle === 'g5') g5Cycle(); break;
     case 'KeyG': stop(); setHsi(S.hsiStyle === 'g5' ? 'mech' : 'g5'); break;
-    case 'KeyY': stop(); apPower(!S.ap.on); break;
-    case 'Comma':  stop(); apTune(-(sh ? 10 : 1)); break;
-    case 'Period': stop(); apTune(  sh ? 10 : 1);  break;
+    case 'KeyV': stop(); setSource(navSrc() === 'gps' ? 'vloc' : 'gps'); break;
     case 'KeyM': stop(); setMapVisible(document.body.classList.contains('nomap')); break;
-    case 'KeyC': stop(); document.body.classList.toggle('norail'); break;
+    case 'KeyC': stop(); document.body.classList.toggle('norail'); markLayout(); break;
     case 'KeyB': stop(); toggle('crumbs'); break;
     case 'KeyI': stop(); toggle('ideal'); break;
     case 'KeyF': stop(); toggle('follow'); break;
-    case 'KeyN': stop(); if (sh) reposition(); else newScenario(true); break;
+    case 'KeyN': stop();
+      if (S.mode === 'arc') { sh ? repositionArc() : newArc(true); }
+      else { sh ? reposition() : newScenario(true); }
+      break;
     case 'Minus': stop(); S.zoom = clamp(S.zoom / 1.15, 4, 260); break;
     case 'Equal': stop(); S.zoom = clamp(S.zoom * 1.15, 4, 260); break;
   }
@@ -2338,6 +2916,7 @@ addEventListener('blur', () => { held.clear(); S.ff = false; applyTurn(); });
 function alignDG() { S.gyroErr = 0; }
 
 function openEntryPrompt() {
+  S.hold.prompted = true;
   S.prompting = true; S.paused = true;
   held.clear(); applyTurn();
   $('entryPrompt').classList.add('show');
@@ -2358,40 +2937,149 @@ function placeMap() {
   if (blk.parentElement !== host) host.appendChild(blk);
 }
 function setMapVisible(on) {
+  markLayout();
   document.body.classList.toggle('nomap', !on);
   $('mapOnOff').textContent = on ? 'Hide' : 'Show';
 }
 function setEntry(v) {
+  if (S.mode === 'arc') return;      // there is no entry to call on an arc
   if (S.prompting) {                 // answering the prompt is always allowed
     S.call_entry = v; closeEntryPrompt(true); syncEntryBtns(); renderVerdict(); return;
   }
   if (S.answer) return;              // otherwise the call closes at the fix
   S.call_entry = v; syncEntryBtns(); renderVerdict();
 }
+/* ---------------- main menu and exercise selection ---------------- */
+function openMenu() {
+  homeBlocks();
+  S.setup = false; $('setup').classList.remove('show');
+  S.menu = true; S.paused = true;
+  held.clear(); S.latch = 0; applyTurn();
+  $('menuResume').style.display = S.started ? '' : 'none';
+  $('menu').classList.add('show');
+}
+function closeMenu() {
+  if (!S.menu) return;
+  S.menu = false; markLayout();
+  $('menu').classList.remove('show');
+  if (!S.prompting) S.paused = false;
+}
+
+/* One engine, two tasks. Everything the exercises share — aeroplane, panel,
+   wind, map — is untouched by the switch; only the task changes. */
+function setMode(m) {
+  S.mode = m;
+  document.body.classList.toggle('arcmode', m === 'arc');
+  $('brand').innerHTML = m === 'arc'
+    ? '<b>DME ARC</b> TRAINER' : '<b>HOLDING PATTERN</b> SIMULATOR';
+  if (m === 'arc') { setLeg(60); newArc(true); }
+  else { syncLegOptions(); newScenario(true); }
+}
+
+function startExercise(exact) {
+  const m = S.setupMode || 'hold';
+  closeSetup(false);
+  S.started = true;
+  markLayout();
+  if (m === 'arc') {
+    if (exact) { setMode('arc'); applyArcFields(); } else setMode('arc');
+  } else {
+    if (S.holdType === 'rnav' && !S.eq.gps) { S.eq.gps = true; $('eqGps').checked = true; }
+    setMode('hold');
+    if (exact) applyHoldFields();
+  }
+}
+
+/* Build the clearance from the boxes rather than rolling one. */
+function applyHoldFields() {
+  S.radial = n360(+$('setRadial').value || 0);
+  S.turns = $('setTurns').value;
+  S.fixDme = (S.holdType === 'rnav' || S.fixMode === 'over') ? 0 : clamp(+$('setFixDme').value || 0, 0, 60);
+  S.fixRadial = S.radial;
+  setLeg($('setLeg').value);
+  S.efcMin = 25;
+  reposition(); buildClearance();
+}
+function applyArcFields() {
+  const A = S.arc;
+  A.r = clamp(+$('setArcR').value || 15, 4, 40);
+  const d = $('setArcDir').value;
+  A.dir = d === 'ccw' ? -1 : d === 'cw' ? 1 : A.dir;
+  const w = $('setArcSweep').value;
+  A.sweep = w === 'any' ? A.sweep : +w;
+  const e = $('setArcEntry').value;
+  A.entry = e === 'any' ? A.entry : e;
+  A.endRadial = n360(A.startRadial + A.dir * A.sweep);
+  S.fixRadial = S.radial = A.endRadial;
+  repositionArc(); buildArcClearance();
+}
+
+function setLevel(v) {
+  if (!LEVELS[v]) return;
+  S.level = v;
+  el('setLevel').value = v;
+  const T = TOL();
+  setHtml('diffHint',
+    `<b style="color:#8e9ba6">${T.name}</b> \u2014 ${T.note}<br>` +
+    `Hold: inbound leg \u00b1${T.legT} s (${T.legD} NM on mileage legs), fix crossing ${T.miss} NM, ` +
+    `course within ${T.dev.toFixed(2)} of full scale.<br>` +
+    `Arc: hold the distance within ${T.arc.toFixed(2)} NM, turn inbound within ${T.lead}\u00b0 of the lead radial.`);
+  regrade();
+}
+
+/* The setup screen borrows the panel's own controls rather than duplicating
+   them: the blocks are moved into it and moved back afterwards, so there is
+   only ever one radial box and one difficulty menu in the document. */
+function homeBlocks() {
+  const d = $('diffSect'), sc = $('holdSect'), ac = $('arcSect');
+  if (d.parentElement !== $('railDiffSlot')) $('railDiffSlot').appendChild(d);
+  const rail = $('railScenarioSlot');
+  if (sc.parentElement !== rail) rail.appendChild(sc);
+  if (ac.parentElement !== rail) rail.appendChild(ac);
+}
+function openSetup(m) {
+  S.setupMode = m;
+  document.body.classList.toggle('arcmode', m === 'arc');
+  $('setupDiff').appendChild($('diffSect'));
+  $('setupSlot').appendChild(m === 'arc' ? $('arcSect') : $('holdSect'));
+  setTxt('setupBrand', m === 'arc' ? 'DME arcs' : 'Holding patterns');
+  setTxt('setupSub', m === 'arc'
+    ? 'The arc, which way round it goes and how you intercept it. Difficulty sets the tolerances you are graded against, not how the aeroplane flies.'
+    : 'What ATC will hand you. Difficulty sets the tolerances you are graded against, not how the aeroplane flies.');
+  setLevel(S.level);
+  S.menu = false; $('menu').classList.remove('show');
+  S.setup = true; $('setup').classList.add('show');
+}
+function closeSetup(toMenu) {
+  homeBlocks();
+  S.setup = false; $('setup').classList.remove('show');
+  if (toMenu) openMenu();
+}
+
 function setHsi(v) { setNavDisplay(v === 'g5' ? 'g5' : 'mech'); }
 function syncHsiBtns() {
-  const rnav = rnavLocked();
-  $('eqCdi').disabled = rnav;
-  $('eqCdi').parentElement.style.opacity = rnav ? .4 : 1;
-  $('setFixDme').disabled = S.fixMode === 'over' || rnav;
-  $('setFixMode').disabled = rnav;
-  $('setFixMode').title = rnav ? 'An RNAV hold is at the waypoint itself' : '';
+  $('setFixDme').disabled = S.fixMode === 'over' || isRnav();
+  $('setFixMode').disabled = isRnav();
+  $('setFixMode').title = isRnav() ? 'An RNAV hold is at the waypoint itself' : '';
+  $('eqCdi').disabled = false;
+  $('eqCdi').parentElement.style.opacity = 1;
   document.querySelectorAll('[data-hsi]').forEach(b => {
-    const mech = b.dataset.hsi === 'mech';
-    b.disabled = mech && rnav;
+    b.disabled = false;
     b.classList.toggle('on', b.dataset.hsi === S.hsiStyle);
-    b.title = mech && rnav ? 'Mileage legs need GPS — a mechanical CDI cannot fly an RNAV hold' : '';
-    if (!mech) b.textContent = rnav ? 'G5 \u00b7 GPS' : 'G5 \u00b7 VOR';   // shows the source it picked
+    b.title = '';
+    if (b.dataset.hsi === 'g5') b.textContent = 'G5';
   });
+  syncSrcBtns();
   syncLegOptions();
 }
 
 /* Leg lengths follow the hold type, and mileage is only offered to an RNAV aircraft. */
 function syncLegOptions() {
+  if (S.mode === 'arc') return;          // an arc has no legs to length
   const sel = $('setLeg');
   Array.from(sel.options).forEach(o => {
     const mile = o.value[0] === 'd';
-    o.disabled = mile ? (!S.eq.g5 || S.holdType === 'vor') : (S.holdType === 'rnav');
+    o.disabled = mile ? (!rnavCapable() || S.holdType === 'vor') : (S.holdType === 'rnav');
   });
   const cur = sel.options[sel.selectedIndex];
   if (cur && cur.disabled) {
@@ -2402,7 +3090,7 @@ function syncLegOptions() {
 
 function setHoldType(v) {
   S.holdType = v;
-  if (v === 'rnav') setNavDisplay('g5');       // mileage legs need the box that can fly them
+  if (v === 'rnav' && !S.eq.gps) { S.eq.gps = true; $('eqGps').checked = true; }
   syncLegOptions();
   buildClearance();
 }
@@ -2417,19 +3105,17 @@ function setFixMode(v) {
 /* Fitting one nav display removes the other. The equipment radios and the
    selector above the readouts are the same switch wired to two places. */
 function setNavDisplay(which) {
-  if (which === 'mech' && isRnav()) which = 'g5';    // no mechanical CDI on an RNAV hold
+  markLayout();
   S.eq.cdi = which !== 'g5';
   S.eq.g5  = which === 'g5';
   S.hsiStyle = S.eq.g5 ? 'g5' : 'mech';
-  if (!S.eq.g5 && isRnav()) { setLeg(60); $('setLeg').value = '60'; buildClearance(); }
   $('eqCdi').checked = S.eq.cdi; $('eqG5').checked = S.eq.g5;
   syncHsiBtns(); navInit();
 }
 
 function setEquip(which, on) {
+  markLayout();
   S.eq[which] = on;
-  if (!S.eq.ap) S.ap.on = false;
-  $('eqAp').checked = S.eq.ap;
 }
 function toggle(name) {
   S.show[name] = S.show[name] ? 0 : 1;
@@ -2440,6 +3126,7 @@ function toggle(name) {
 document.querySelectorAll('[data-t]').forEach(b => b.onclick = () => toggle(b.dataset.t));
 document.querySelectorAll('[data-e]').forEach(b => tapBtn(b, () => { try { setEntry(b.dataset.e); } catch (err) { showFatal('Entry', err); } }));
 document.querySelectorAll('[data-hsi]').forEach(b => b.onclick = () => setHsi(b.dataset.hsi));
+document.querySelectorAll('[data-src]').forEach(b => b.onclick = () => setSource(b.dataset.src));
 $('zin').onclick  = () => S.zoom = clamp(S.zoom * 1.25, 4, 260);
 $('zout').onclick = () => S.zoom = clamp(S.zoom / 1.25, 4, 260);
 mapCv.addEventListener('wheel', e => { e.preventDefault(); S.zoom = clamp(S.zoom * (e.deltaY < 0 ? 1.12 : 1/1.12), 4, 260); }, { passive: false });
@@ -2521,37 +3208,6 @@ dgCv.addEventListener('pointermove', e => {
   if (e.pointerId === dgId) dgId = null;
 }));
 
-/* autopilot: tap the rocker, drag or roll the knob */
-let apId = null, apPrev = 0;
-apCv.addEventListener('pointerdown', e => {
-  if (overKnob(apCv, e, S.hitApPwr, 1.1) && !overKnob(apCv, e, S.hitApKnob, 1.3)) {
-    apPower(!S.ap.on); return;                       // rocker is a tap, no capture needed
-  }
-  if (apId !== null || !overKnob(apCv, e, S.hitApKnob, 1.3)) return;
-  apId = e.pointerId; apPrev = angAbout(apCv, e, S.hitApKnob);
-  capture(apCv, apId);
-});
-apCv.addEventListener('pointermove', e => {
-  if (e.pointerId !== apId) return;
-  const a = angAbout(apCv, e, S.hitApKnob), d = n180(a - apPrev);
-  apPrev = a; apTune(d * 0.5, d);
-});
-['pointerup', 'pointercancel'].forEach(t => apCv.addEventListener(t, e => {
-  if (e.pointerId === apId) apId = null;
-}));
-wheelAdj(apCv, d => apTune(d));
-
-function apPower(on) {
-  if (!S.eq.ap) return;
-  S.ap.on = on;
-  if (on) { S.ap.hdg = Math.round(S.ac.hdg); S.ap.togo = 0; }   // captures what you are flying now
-}
-function apTune(deg, spin) {
-  S.ap.knob = n360(S.ap.knob + (spin === undefined ? deg * 12 : spin));
-  S.ap.hdg = n360(S.ap.hdg + deg);
-  S.ap.togo += deg;              // accumulates in the direction wound, past 180 and beyond
-}
-
 $('setTas').oninput   = e => S.ac.tas = clamp(+e.target.value || 100, 40, 300);
 $('setWdir').oninput  = e => S.wind.dir = n360(+e.target.value || 0);
 $('setWspd').oninput  = e => S.wind.spd = clamp(+e.target.value || 0, 0, 99);
@@ -2566,9 +3222,16 @@ $('setDrift').oninput  = e => S.gyroDrift = clamp(+e.target.value || 0, 0, 60);
 $('btnAlign').onclick  = () => alignDG();
 $('eqCdi').onchange    = () => setNavDisplay('mech');
 $('eqG5').onchange     = () => setNavDisplay('g5');
-$('eqAp').onchange     = e => setEquip('ap', e.target.checked);
 $('eqTc').onchange     = e => setEquip('tc', e.target.checked);
 $('eqAi').onchange     = e => setEquip('ai', e.target.checked);
+$('eqGps').onchange    = e => {
+  S.eq.gps = e.target.checked;
+  if (!S.eq.gps) {
+    S.src = 'vloc';
+    if (isRnav()) { setLeg(60); $('setLeg').value = '60'; buildClearance(); }
+  }
+  syncHsiBtns(); navInit();
+};
 $('setTurnMode').onchange = e => S.turnMode = e.target.value;
 $('setRate').onchange = e => S.rate = +e.target.value;
 $('setFF').onchange   = e => S.ffMult = +e.target.value;
@@ -2583,18 +3246,25 @@ $('btnNew').onclick   = () => newScenario(true);
 $('btnReset').onclick = () => reposition();
 $('btnRestart').onclick = () => restart();
 $('btnHelp').onclick = () => $('help').classList.add('show');
-$('btnApply').onclick = () => {
-  S.radial = n360(+$('setRadial').value || 0);
-  S.turns = $('setTurns').value;
-  S.fixDme = (S.holdType === 'rnav' || S.fixMode === 'over') ? 0 : clamp(+$('setFixDme').value || 0, 0, 60);
-  S.fixRadial = S.radial;
-  setLeg($('setLeg').value);
-  S.efcMin = 25;
-  reposition(); buildClearance();
-};
+$('btnApply').onclick = () => applyHoldFields();
+$('btnMenu').onclick = () => openMenu();
+$('menuResume').onclick = () => closeMenu();
+$('menuHelp').onclick = () => $('help').classList.add('show');
+document.querySelectorAll('[data-open]').forEach(b =>
+  b.onclick = () => { try { openSetup(b.dataset.open); } catch (err) { showFatal('Setup', err); } });
+$('setupStart').onclick = () => { try { startExercise(false); } catch (err) { showFatal('Start', err); } };
+$('setupExact').onclick = () => { try { startExercise(true); } catch (err) { showFatal('Start', err); } };
+$('setupBack').onclick  = () => closeSetup(true);
+$('setLevel').onchange  = e => setLevel(e.target.value);
+
+$('btnArcNew').onclick     = () => newArc(true);
+$('btnArcAgain').onclick   = () => repositionArc();
+$('btnArcRestart').onclick = () => restart();
+$('btnArcApply').onclick   = () => applyArcFields();
+
 $('help').onclick = () => $('help').classList.remove('show');
 tapBtn($('timerCard'), () => timerTap());
-$('railClose').onclick = () => document.body.classList.add('norail');
+$('railClose').onclick = () => { document.body.classList.add('norail'); markLayout(); };
 $('mapOnOff').onclick = () => setMapVisible(document.body.classList.contains('nomap'));
 $('epSkip').onclick = () => { closeEntryPrompt(true); renderVerdict(); };
 
@@ -2646,6 +3316,7 @@ tapBtn($('tbMult'),  () => {
 });
 
 function setTouch(on) {
+  markLayout();
   document.body.classList.toggle('touch', on);
   $('setTouch').checked = on;
   if (!on) S.ff = false;
@@ -2660,7 +3331,7 @@ $('setTouch').onchange = e => setTouch(e.target.checked);
 
 /* Anything that is not one of the scrolling regions must not move the page.
    Without this a drag on a knob or a bezel drags the whole document with it. */
-const SCROLLERS = '.scroll,#sideCol,#help,#verdict';
+const SCROLLERS = '.scroll,#sideCol,#help,#verdict,#menu';
 document.addEventListener('touchmove', e => {
   const t = e.target;
   if (!t || !t.closest || !t.closest(SCROLLERS)) e.preventDefault();
@@ -2687,7 +3358,7 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') keepAwake();
 });
 addEventListener('pointerdown', keepAwake, { once: true });
-$('btnRail').onclick = () => document.body.classList.toggle('norail');
+$('btnRail').onclick = () => { document.body.classList.toggle('norail'); markLayout(); };
 
 /* Callable from the console: newRandomScenario() or newRandomScenario({radial:217,turns:'left',force:'teardrop'}) */
 window.newRandomScenario = opts => {
@@ -2710,7 +3381,8 @@ S.efcMin = 25;
 setMapVisible(true);
 setTouch(matchMedia('(hover: none) and (pointer: coarse)').matches);
 if (innerWidth <= 1200) document.body.classList.add('norail');
-newScenario(true);
+newScenario(true);       // something valid loaded behind the menu
+openMenu();
 requestAnimationFrame(frame);
 })();
 </script>
