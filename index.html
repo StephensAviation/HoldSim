@@ -62,8 +62,26 @@
     min-height:0;min-width:0;overflow:hidden}
   #stageBody{flex:1 1 0;min-height:0;min-width:0;overflow:hidden;
     display:flex;flex-direction:column;gap:9px}
-  #instCol{flex:1 1 0;min-height:0;min-width:0;overflow:hidden;
+  #instCol{flex:1 1 0;min-height:0;min-width:0;overflow:hidden;position:relative;
     display:flex;flex-direction:column;gap:9px}
+  /* Paused is a state you can see and a target you can hit. It covers the
+     instruments only, so the clearance, the readouts and the map stay readable
+     while the aeroplane is stopped. */
+  #pauseVeil{position:absolute;inset:0;z-index:20;display:none;cursor:pointer;
+    align-items:center;justify-content:center;background:rgba(5,7,10,.58)}
+  body.paused #pauseVeil{display:flex}
+  .veilBox{display:flex;flex-direction:column;align-items:center;gap:11px;pointer-events:none;text-align:center}
+  .veilRing{width:92px;height:92px;border-radius:50%;border:2px solid var(--grn);
+    display:flex;align-items:center;justify-content:center;background:rgba(11,18,14,.9)}
+  .veilRing span{font-size:32px;line-height:1;color:var(--grn);margin-left:7px}
+  .veilTxt{font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:#dfe6ee}
+  .veilSub{font-size:12px;letter-spacing:.05em;color:var(--dim)}
+  body.touch .veilRing{width:116px;height:116px}
+  body.touch .veilRing span{font-size:40px}
+  body.touch .veilTxt{font-size:14px}
+  body.touch .veilSub{font-size:14px}
+  #btnPause{min-width:76px}
+  body.paused #btnPause{color:var(--grn);border-color:#2f5a44}
   #sideCol{flex:0 1 auto;min-height:0;min-width:0;overflow-y:auto;overflow-x:hidden;
     display:flex;flex-direction:column;gap:9px}
   #hsiBox{flex:1 1 0;min-height:80px;min-width:0;overflow:hidden;
@@ -222,6 +240,7 @@
   .tb .big{font-family:var(--mono);font-size:25px;line-height:1;color:#e6edf4;letter-spacing:0;font-variant-numeric:tabular-nums}
   .tb.turn{flex:1.25}
   .tb.mult{flex:0 0 74px;font-family:var(--mono);font-size:17px;letter-spacing:0}
+  .tb.pause{flex:.8}
   .tb.act,.tb.on{background:#17281f;border-color:var(--grn);color:var(--grn)}
   .tb.act .big,.tb.on .big{color:var(--grn)}
   #railClose{display:none}
@@ -400,6 +419,7 @@
     <div class="spacer"></div>
     <div class="state" id="hdrState"></div>
     <div class="kbdhint">A / D turn &nbsp;·&nbsp; Space fast-fwd &nbsp;·&nbsp; T timer &nbsp;·&nbsp; H help</div>
+    <button class="hdrbtn" id="btnPause">Pause</button>
     <button class="hdrbtn" id="btnMenu">Menu</button>
     <button class="hdrbtn" id="btnHelp">Controls</button>
     <button class="hdrbtn" id="btnRail">Panel</button>
@@ -420,6 +440,13 @@
             <canvas id="hsi"></canvas>
             <canvas id="dg"></canvas>
             <canvas id="tc"></canvas>
+          </div>
+          <div id="pauseVeil">
+            <div class="veilBox">
+              <div class="veilRing"><span>&#9654;</span></div>
+              <div class="veilTxt">Paused</div>
+              <div class="veilSub" id="veilSub">Tap to fly</div>
+            </div>
           </div>
           <div class="statusRow">
             <div id="stageStatus"></div>
@@ -649,6 +676,7 @@
   <div id="touchbar">
     <button class="tb turn" id="tbL"><span class="glyph">&#9664;</span>Left</button>
     <button class="tb" id="tbTimer"><span class="big" id="tbTime">0:00</span><span id="tbTimerLbl">Tap to start</span></button>
+    <button class="tb pause" id="tbPause"><span class="glyph" id="tbPauseGlyph">&#10074;&#10074;</span><span id="tbPauseLbl">Pause</span></button>
     <button class="tb" id="tbFF"><span class="glyph">&#9193;</span>Speed up</button>
     <button class="tb mult" id="tbMult">&times;8</button>
     <button class="tb turn" id="tbR"><span class="glyph">&#9654;</span>Right</button>
@@ -740,6 +768,9 @@
       </div>
     </div>
 
+    <h2>Pausing</h2>
+    <p>Start means start: pressing it on the setup page puts the aeroplane in the air and running. After that the <b>Pause</b> button in the header, the one on the touch bar and the <b>Z</b> key are the same switch, and while it is stopped the instruments dim behind a play button you can tap anywhere on to carry on. The clearance, the readouts and the map stay readable underneath, so pausing to work something out on the map does not hide the thing you were reading.</p>
+
     <p class="lede">Hold-to-turn is the default. Everything else is a tap. Nothing here needs the mouse, but the mouse works everywhere the keys do.</p>
 
     <h2>Fly the aeroplane</h2>
@@ -748,7 +779,7 @@
       <div><kbd>D</kbd><span>Standard-rate turn right, while held</span></div>
       <div><kbd>&larr; &rarr;</kbd><span>Same as A and D</span></div>
       <div><kbd>Space</kbd><span>Fast-forward while held</span></div>
-      <div><kbd>Z</kbd><span>Pause and resume</span></div>
+      <div><kbd>Z</kbd><span>Pause and resume &mdash; same as the Pause button and the touch bar</span></div>
     </div>
 
     <h2>Timer</h2>
@@ -2747,6 +2778,7 @@ function draw() {
   setCls('tbL', 'act', S.turnCmd < 0);
   setCls('tbR', 'act', S.turnCmd > 0);
   setCls('timerBox', 'run', S.timer.run);
+  syncPause();
   setTxt('lapInfo', S.legNm ? `${S.legNm} NM legs` : `${mmss(S.legSec)} legs`);
 
   if (S.mode === 'arc') {
@@ -2911,7 +2943,7 @@ addEventListener('keydown', e => {
   switch (k) {
     case 'KeyT': stop(); if (sh) { S.timer.t = 0; S.timer.run = true; } else S.timer.run = !S.timer.run; break;
     case 'KeyR': stop(); if (sh) { restart(); } else { S.timer.t = 0; S.timer.run = false; } break;
-    case 'KeyZ': stop(); if (!S.prompting) S.paused = !S.paused; break;
+    case 'KeyZ': stop(); setPaused(!S.paused); break;
     case 'KeyP':         stop(); S.obs = n360(S.obs - 10); break;
     case 'BracketLeft':  stop(); S.obs = n360(S.obs - (sh ? 10 : 1)); break;
     case 'BracketRight': stop(); S.obs = n360(S.obs + (sh ? 10 : 1)); break;
@@ -2959,7 +2991,7 @@ function alignDG() { S.gyroErr = 0; }
 
 function openEntryPrompt() {
   S.hold.prompted = true;
-  S.prompting = true; S.paused = true;
+  S.prompting = true; S.paused = true; syncPause();
   held.clear(); applyTurn();
   $('entryPrompt').classList.add('show');
 }
@@ -2968,6 +3000,7 @@ function closeEntryPrompt(resume) {
   S.prompting = false;
   if (resume) S.paused = false;
   $('entryPrompt').classList.remove('show');
+  syncPause();
 }
 
 /* The map lives in the side rail on a desktop and in the stage on a tablet,
@@ -2992,10 +3025,26 @@ function setEntry(v) {
   S.call_entry = v; syncEntryBtns(); renderVerdict();
 }
 /* ---------------- main menu and exercise selection ---------------- */
+/* The clock has one owner. Everything that stops or starts the simulation goes
+   through here so the button, the veil and the state can never disagree. */
+function setPaused(on) {
+  if (S.prompting) return;              // the entry prompt holds the clock itself
+  S.paused = !!on;
+  syncPause();
+}
+function syncPause() {
+  document.body.classList.toggle('paused', S.paused && !S.prompting && !S.menu && !S.setup);
+  setTxt('btnPause', S.paused ? 'Resume' : 'Pause');
+  setHtml('tbPauseGlyph', S.paused ? '&#9654;' : '&#10074;&#10074;');
+  setTxt('tbPauseLbl', S.paused ? 'Fly' : 'Pause');
+  setTxt('veilSub', touchOn() ? 'Tap to fly' : 'Click to fly, or press Z');
+  setCls('tbPause', 'on', S.paused);
+}
+
 function openMenu() {
   homeBlocks();
   S.setup = false; $('setup').classList.remove('show');
-  S.menu = true; S.paused = true;
+  S.menu = true; S.paused = true; syncPause();
   held.clear(); S.latch = 0; applyTurn();
   $('menuResume').style.display = S.started ? '' : 'none';
   $('menu').classList.add('show');
@@ -3004,7 +3053,7 @@ function closeMenu() {
   if (!S.menu) return;
   S.menu = false; markLayout();
   $('menu').classList.remove('show');
-  if (!S.prompting) S.paused = false;
+  setPaused(false);
 }
 
 /* One engine, two tasks. Everything the exercises share — aeroplane, panel,
@@ -3023,6 +3072,7 @@ function startExercise(exact) {
   closeSetup(false);
   S.started = true;
   markLayout();
+  setPaused(false);            // "Start" starts it — there is a Pause button for the rest
   if (m === 'arc') {
     if (exact) { setMode('arc'); applyArcFields(); } else setMode('arc');
   } else {
@@ -3081,6 +3131,7 @@ function homeBlocks() {
 }
 function openSetup(m) {
   S.setupMode = m;
+  S.paused = true; syncPause();
   document.body.classList.toggle('arcmode', m === 'arc');
   $('setupDiff').appendChild($('diffSect'));
   $('setupSlot').appendChild(m === 'arc' ? $('arcSect') : $('holdSect'));
@@ -3095,7 +3146,7 @@ function openSetup(m) {
 function closeSetup(toMenu) {
   homeBlocks();
   S.setup = false; $('setup').classList.remove('show');
-  if (toMenu) openMenu();
+  if (toMenu) openMenu(); else syncPause();
 }
 
 function setHsi(v) { setNavDisplay(v === 'g5' ? 'g5' : 'mech'); }
@@ -3290,6 +3341,8 @@ $('btnRestart').onclick = () => restart();
 $('btnHelp').onclick = () => $('help').classList.add('show');
 $('btnApply').onclick = () => applyHoldFields();
 $('btnMenu').onclick = () => openMenu();
+$('btnPause').onclick = () => setPaused(!S.paused);
+tapBtn($('pauseVeil'), () => setPaused(false));
 $('menuResume').onclick = () => closeMenu();
 $('menuHelp').onclick = () => $('help').classList.add('show');
 document.querySelectorAll('[data-open]').forEach(b =>
@@ -3350,6 +3403,7 @@ function touchTurn(dir, down) {
 holdBtn($('tbL'), () => touchTurn(-1, true), () => touchTurn(-1, false));
 holdBtn($('tbR'), () => touchTurn( 1, true), () => touchTurn( 1, false));
 tapBtn($('tbTimer'), () => timerTap());
+tapBtn($('tbPause'), () => setPaused(!S.paused));
 tapBtn($('tbFF'),    () => { S.ff = !S.ff; });
 tapBtn($('tbMult'),  () => {
   const opts = [2, 4, 8, 16];
