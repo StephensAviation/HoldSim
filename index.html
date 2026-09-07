@@ -32,7 +32,7 @@
     overflow:hidden;overscroll-behavior:none;
   }
   /* the only regions allowed to move under a finger */
-  .scroll,#sideCol,#help,#verdict,#menu{touch-action:pan-y;overscroll-behavior:contain}
+  .scroll,#sideCol,#help,#verdict,.ovBody{touch-action:pan-y;overscroll-behavior:contain}
   button,input,select{font-family:inherit;color:inherit}
 
   /* ---------- shell ---------- */
@@ -303,33 +303,60 @@
   body.touch .epSkip{font-size:15px;padding:14px}
 
   /* ---------- main menu ---------- */
-  #menu{position:fixed;inset:0;z-index:80;display:none;overflow:auto;-webkit-overflow-scrolling:touch;
+  /* Both overlays are a fixed head, a scrolling middle and an action row pinned
+     to the bottom. On a 768 point iPad in landscape the settings are taller than
+     the screen however they are arranged, so the page has to scroll and Start
+     has to stay put while it does. */
+  #menu,#setup{position:fixed;inset:0;z-index:80;display:none;
     background:radial-gradient(120% 90% at 50% 0%,#0d141c 0%,#05070a 62%)}
-  #menu.show{display:block}
-  .menuInner{max-width:960px;margin:0 auto;
-    padding:calc(30px + env(safe-area-inset-top)) max(20px,env(safe-area-inset-right))
-            calc(34px + env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left))}
+  #menu.show,#setup.show{display:block}
+  .menuInner{
+    display:flex;flex-direction:column;height:100%;max-width:960px;margin:0 auto;
+    padding:calc(22px + env(safe-area-inset-top)) max(20px,env(safe-area-inset-right))
+            calc(16px + env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left))}
+  .ovHead{flex:none}
+  .ovBody{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;
+    -webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior:contain;
+    padding-bottom:6px;margin-right:-4px;padding-right:4px}
+  .ovFoot{flex:none;padding-top:12px;border-top:1px solid var(--rule);margin-top:10px}
   .menuBrand{font-size:11px;letter-spacing:.34em;text-transform:uppercase;color:var(--dim2)}
   .menuTitle{font-size:25px;letter-spacing:.16em;text-transform:uppercase;margin:7px 0 6px;
     color:var(--txt);font-weight:600}
   .menuSub{font-size:13.5px;color:var(--dim);max-width:64ch;line-height:1.65;margin:0}
-  .menuGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:22px}
+  .menuGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:14px;margin-top:18px}
   .mcard{background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:16px 16px 14px}
   .mcard h3{margin:0;font-size:14px;letter-spacing:.18em;text-transform:uppercase;color:var(--txt);font-weight:600}
   .mcard p{margin:8px 0 0;font-size:13px;line-height:1.6;color:var(--dim)}
   .mrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:13px}
   .mrow .chip{cursor:pointer;text-transform:none;letter-spacing:.04em}
   .mrow .chip:hover{color:#e6edf4;border-color:#46586a;background:#131b24}
-  #setup{position:fixed;inset:0;z-index:80;display:none;overflow:auto;-webkit-overflow-scrolling:touch;
-    background:radial-gradient(120% 90% at 50% 0%,#0d141c 0%,#05070a 62%)}
-  #setup.show{display:block}
-  .setupCols{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:14px;margin-top:20px;
+  .setupCols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:16px;
     align-items:start}
-  #setupSlot .btnrow,#setupDiff .btnrow{display:none}
+  #setupSlot .btnrow,#setupDiff .btnrow,#setupSlot .btnHint{display:none}
+  #setupStart{background:#1d2b23;border-color:var(--grn);color:var(--grn)}
   #setupSlot .sect:first-child,#setupDiff .sect:first-child{margin-top:0}
-  .menuFoot{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+  /* Wide enough and the settings run in two columns inside their own card, which
+     is what keeps a ten row clearance block on one screen in landscape. */
+  @media (min-width:880px){
+    #setupSlot > div{column-count:2;column-gap:20px}
+    #setupSlot .setline,#setupSlot .hint,#setupSlot .btnrow{break-inside:avoid;-webkit-column-break-inside:avoid}
+    #setupSlot .sect{column-span:all;-webkit-column-span:all}
+  }
+  /* Short screens: the explanatory lines are the first thing to go. */
+  @media (max-height:730px){
+    .menuTitle{font-size:20px;margin:4px 0 3px}
+    #setupSub{display:none}
+    #setupSlot .hint,#setupDiff .hint{font-size:11px;line-height:1.45}
+    .menuNote{display:none}
+  }
+  @media (max-height:620px){
+    .menuBrand{display:none}
+    #setupSlot .hint,#setupDiff .hint{display:none}
+    body.touch #setupSlot .setline,body.touch #setupDiff .setline{margin-top:7px;font-size:13px}
+  }
+  .menuFoot{display:flex;gap:8px;flex-wrap:wrap}
   .menuFoot .btn{flex:0 1 210px}
-  .menuNote{font-size:11.5px;color:var(--dim2);margin-top:16px;letter-spacing:.04em}
+  .menuNote{font-size:11.5px;color:var(--dim2);margin-top:10px;letter-spacing:.04em}
   body.touch .menuTitle{font-size:27px}
   body.touch .menuSub{font-size:15px}
   body.touch .mcard h3{font-size:16px}
@@ -552,7 +579,7 @@
         <button class="btn" id="btnReset">New arrival<kbd>Shift+N</kbd></button>
         <button class="btn" id="btnRestart">Restart this one<kbd>Shift+R</kbd></button>
       </div>
-      <div class="hint">
+      <div class="hint btnHint">
         <b style="color:#8e9ba6">New random</b> rolls a fresh clearance and a fresh arrival.
         <b style="color:#8e9ba6">Apply fields</b> builds the clearance from the boxes above, then gives you an arrival for it.
         <b style="color:#8e9ba6">New arrival</b> keeps the clearance and drops you in from somewhere else.
@@ -630,11 +657,14 @@
 
 <div id="menu">
   <div class="menuInner">
-    <div class="menuBrand">Stephens Aviation</div>
-    <div class="menuTitle">Instrument procedures trainer</div>
-    <p class="menuSub">Pick something to practise. Both exercises fly the same aeroplane on the same
-      panel, so the wind, airspeed, equipment and everything else in the Panel carries across.</p>
+    <div class="ovHead">
+      <div class="menuBrand">Stephens Aviation</div>
+      <div class="menuTitle">Instrument procedures trainer</div>
+      <p class="menuSub">Pick something to practise. Both exercises fly the same aeroplane on the same
+        panel, so the wind, airspeed, equipment and everything else in the Panel carries across.</p>
+    </div>
 
+    <div class="ovBody">
     <div class="menuGrid">
       <div class="mcard">
         <h3>Holding patterns</h3>
@@ -652,30 +682,41 @@
         <div class="mrow"><button class="chip" data-open="arc">Set up an arc &rarr;</button></div>
       </div>
     </div>
-
-    <div class="menuFoot">
-      <button class="btn" id="menuResume">Resume what I was flying</button>
-      <button class="btn" id="menuHelp">Controls &amp; how it works</button>
     </div>
-    <div class="menuNote">The Menu button in the header brings this back. Esc closes it.</div>
+
+    <div class="ovFoot">
+      <div class="menuFoot">
+        <button class="btn" id="menuResume">Resume what I was flying</button>
+        <button class="btn" id="menuHelp">Controls &amp; how it works</button>
+      </div>
+      <div class="menuNote">The Menu button in the header brings this back. Esc closes it.</div>
+    </div>
   </div>
 </div>
 
 <div id="setup">
   <div class="menuInner">
-    <div class="menuBrand" id="setupBrand">Holding patterns</div>
-    <div class="menuTitle">Set it up</div>
-    <p class="menuSub" id="setupSub"></p>
-    <div class="setupCols">
-      <div class="mcard"><div id="setupDiff"></div></div>
-      <div class="mcard"><div id="setupSlot"></div></div>
+    <div class="ovHead">
+      <div class="menuBrand" id="setupBrand">Holding patterns</div>
+      <div class="menuTitle">Set it up</div>
+      <p class="menuSub" id="setupSub"></p>
     </div>
-    <div class="menuFoot">
-      <button class="btn" id="setupStart">Start &mdash; random</button>
-      <button class="btn" id="setupExact">Use these exact fields</button>
-      <button class="btn" id="setupBack">Back</button>
+
+    <div class="ovBody">
+      <div class="setupCols">
+        <div class="mcard"><div id="setupDiff"></div></div>
+        <div class="mcard"><div id="setupSlot"></div></div>
+      </div>
     </div>
-    <div class="menuNote">Everything here is also in the Panel while you fly, and Esc goes back.</div>
+
+    <div class="ovFoot">
+      <div class="menuFoot">
+        <button class="btn" id="setupStart">Start &mdash; random</button>
+        <button class="btn" id="setupExact">Use these exact fields</button>
+        <button class="btn" id="setupBack">Back</button>
+      </div>
+      <div class="menuNote">Everything here is also in the Panel while you fly, and Esc goes back.</div>
+    </div>
   </div>
 </div>
 
@@ -794,6 +835,7 @@
 
     <h2>The menu</h2>
     <p>The app opens on a menu with the two exercises on it: holding patterns and DME arcs. Picking one opens a setup page for the clearance and the tolerances, with two ways out of it — <b>Start</b> rolls a random clearance inside whatever you have set, and <b>Use these exact fields</b> builds the one in the boxes. The controls on that page are the same ones in the Panel, borrowed for the occasion, so there is only ever one radial box and one difficulty menu to get out of step.</p>
+    <p>The setup page is a fixed heading, a scrolling middle and an action row that stays put, so Start is always where you left it however long the settings run. Given the width for it the clearance settings split into two columns, which puts the whole thing on one screen on an iPad in landscape; on a phone, or in portrait with a lot set, the middle scrolls under the buttons.</p>
     <p>The <b>Menu</b> button in the header brings it back at any time and <b>Esc</b> steps back a page, leaving whatever you were flying exactly where it was. Switching exercises does not disturb the aeroplane: the wind, airspeed, equipment, turn model and every other setting carry straight across.</p>
 
     <h2>Grading</h2>
@@ -3331,7 +3373,7 @@ $('setTouch').onchange = e => setTouch(e.target.checked);
 
 /* Anything that is not one of the scrolling regions must not move the page.
    Without this a drag on a knob or a bezel drags the whole document with it. */
-const SCROLLERS = '.scroll,#sideCol,#help,#verdict,#menu';
+const SCROLLERS = '.scroll,#sideCol,#help,#verdict,.ovBody';
 document.addEventListener('touchmove', e => {
   const t = e.target;
   if (!t || !t.closest || !t.closest(SCROLLERS)) e.preventDefault();
